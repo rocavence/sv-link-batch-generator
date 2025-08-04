@@ -1,10 +1,10 @@
 {
   "functions": {
     "api/shorten.py": {
-      "runtime": "python3.9"
+      "runtime": "@vercel/python@4.0.0"
     },
     "api/export.py": {
-      "runtime": "python3.9"
+      "runtime": "@vercel/python@4.0.0"
     }
   }
 }
