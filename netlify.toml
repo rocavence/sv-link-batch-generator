@@ -2,105 +2,35 @@
 # StreetVoice sv.link 批次短網址生成器
 
 [build]
-  # 發佈目錄 - 專案根目錄
   publish = "."
-  
-  # 不需要建置指令，因為是純前端 + Netlify Functions
   command = ""
 
-# Python 環境設定
 [build.environment]
   PYTHON_VERSION = "3.8"
 
-# Netlify Functions 設定
 [functions]
-  # Functions 目錄位置
   directory = "netlify/functions"
-  
-  # Python Functions 執行時間限制（秒）
   timeout = 30
-  
-  # 記憶體限制
   memory = 128
 
-# 重定向規則
 [[redirects]]
-  # API 路由重定向到 Functions
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
 [[redirects]]
-  # 確保前端路由正常工作
   from = "/*"
   to = "/index.html"
   status = 200
-  # 只對 HTML 請求進行重定向
-  conditions = {Role = ["visitor"]}
 
-# Headers 設定
 [[headers]]
-  # 對所有檔案設定 CORS
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, X-API-Key"
-    X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
 
 [[headers]]
-  # 靜態資源快取設定
   for = "/static/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  # JavaScript 庫檔案快取
-  for = "/static/js/libs/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  # CSS 檔案快取
-  for = "/static/css/*"
-  [headers.values]
-    Cache-Control = "public, max-age=86400"
-
-[[headers]]
-  # HTML 檔案不快取
-  for = "/*.html"
-  [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
-
-# 表單處理（如果未來需要）
-[forms]
-  # 表單垃圾郵件過濾
-  spam_protection = true
-
-# 網站基本設定
-[context.production]
-  # 生產環境設定
-  command = ""
-  
-[context.deploy-preview]
-  # Deploy Preview 環境設定
-  command = ""
-
-[context.branch-deploy]
-  # 分支部署設定
-  command = ""
-
-# 環境變數（敏感資料應在 Netlify 控制台設定）
-# [build.environment]
-#   NODE_ENV = "production"
-
-# 外掛設定（如果需要）
-# [[plugins]]
-#   package = "@netlify/plugin-lighthouse"
-
-# 邊緣函數設定（如果未來需要）
-# [[edge_functions]]
-#   function = "geolocation"
-#   path = "/api/geo/*"
+    Cache-Control = "public, max-age=31536000"
