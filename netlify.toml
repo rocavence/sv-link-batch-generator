@@ -1,8 +1,0 @@
-[build]
-  publish = "."
-
-[build.environment]
-  PYTHON_VERSION = "3.8"
-
-[functions]
-  directory = "netlify/functions"
