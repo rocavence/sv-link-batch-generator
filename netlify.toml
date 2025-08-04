@@ -6,4 +6,3 @@
 
 [functions]
   directory = "netlify/functions"
-  python_requirements = "requirements.txt"
