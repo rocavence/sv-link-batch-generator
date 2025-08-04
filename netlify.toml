@@ -1,5 +1,9 @@
+[build]
+  publish = "."
+
 [build.environment]
   PYTHON_VERSION = "3.8"
 
 [functions]
   directory = "netlify/functions"
+  python_requirements = "requirements.txt"

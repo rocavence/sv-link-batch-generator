@@ -1,8 +1,1 @@
-# StreetVoice sv.link 批次短網址生成器
-# Python 依賴清單
-
-# HTTP 請求庫
 requests==2.31.0
-
-# 不需要 qrcode 相關庫，因為在前端處理
-# qrcode[pil]==7.4.2  ← 移除，前端處理
