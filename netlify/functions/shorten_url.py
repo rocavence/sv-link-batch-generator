@@ -5,7 +5,6 @@ Netlify Function for URL shortening via sv.link API
 
 import json
 import requests
-from urllib.parse import parse_qs
 import time
 
 
@@ -241,24 +240,3 @@ def handler(event, context):
                 'details': str(e)[:100]  # Limit error message length
             })
         }
-
-
-# For local testing (optional)
-if __name__ == "__main__":
-    # Test event structure
-    test_event = {
-        'httpMethod': 'POST',
-        'body': json.dumps({
-            'api_key': 'test-api-key',
-            'urls': [
-                'https://streetvoice.com/artist1/',
-                'https://streetvoice.com/artist2/'
-            ]
-        })
-    }
-    
-    test_context = {}
-    
-    # Run handler
-    result = handler(test_event, test_context)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
