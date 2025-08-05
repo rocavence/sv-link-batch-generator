@@ -5,6 +5,152 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreetVoice 街聲 sv.link 批次短網址生成器</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .url-input-wrapper {
+            position: relative;
+        }
+        
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            border-radius: 8px 0 0 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            color: #6c757d;
+            padding: 12px 8px;
+            line-height: 1.5;
+            user-select: none;
+            pointer-events: none;
+            white-space: pre;
+        }
+        
+        #urlList {
+            padding-left: 50px !important;
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        
+        .results-table th {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .results-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+        
+        .results-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .row-number {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            min-width: 30px;
+            text-align: center;
+        }
+        
+        .url-cell {
+            max-width: 300px;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+        
+        .original-url {
+            color: var(--text-secondary);
+        }
+        
+        .short-url {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .copy-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:hover {
+            background: var(--primary-hover);
+        }
+        
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .copy-btn.copied {
+            background: #28a745;
+        }
+        
+        @media (max-width: 768px) {
+            .results-table {
+                font-size: 0.85rem;
+            }
+            
+            .results-table th,
+            .results-table td {
+                padding: 8px 6px;
+            }
+            
+            .url-cell {
+                max-width: 200px;
+            }
+        }
+    </style>
 </head>
 <body>
     <header class="header">
@@ -24,7 +170,10 @@
 
                 <div class="form-group">
                     <label for="urlList">要縮短的網址清單（每行一個）</label>
-                    <textarea id="urlList" placeholder="https://streetvoice.com/artist1/&#10;https://streetvoice.com/artist2/&#10;https://streetvoice.com/artist3/"></textarea>
+                    <div class="url-input-wrapper">
+                        <div class="line-numbers" id="lineNumbers">1</div>
+                        <textarea id="urlList" placeholder="https://streetvoice.com/artist1/&#10;https://streetvoice.com/artist2/&#10;https://streetvoice.com/artist3/"></textarea>
+                    </div>
                 </div>
 
                 <button class="btn" id="processBtn">
@@ -66,6 +215,7 @@
         // DOM 元素
         const apiKeyInput = document.getElementById('apiKey');
         const urlListInput = document.getElementById('urlList');
+        const lineNumbers = document.getElementById('lineNumbers');
         const processBtn = document.getElementById('processBtn');
         const loading = document.getElementById('loading');
         const btnText = document.getElementById('btnText');
@@ -77,6 +227,17 @@
         const exportSection = document.getElementById('exportSection');
         const exportCsvBtn = document.getElementById('exportCsv');
         const exportQrZipBtn = document.getElementById('exportQrZip');
+
+        // 更新行號
+        function updateLineNumbers() {
+            const lines = urlListInput.value.split('\n');
+            const lineCount = lines.length;
+            let numbers = '';
+            for (let i = 1; i <= lineCount; i++) {
+                numbers += i + '\n';
+            }
+            lineNumbers.textContent = numbers;
+        }
 
         // 處理短網址
         async function processUrls() {
@@ -163,6 +324,45 @@
         // 顯示結果
         function displayResults(resultsData, summary) {
             let html = `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">狀態</th>
+                            <th style="width: 60px;">編號</th>
+                            <th>原始網址</th>
+                            <th>短網址</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            resultsData.forEach((result, index) => {
+                const statusClass = result.success ? 'status-success' : 'status-failed';
+                const statusText = result.success ? '成功' : '失敗';
+                const copyButton = result.success ? 
+                    `<button class="copy-btn" onclick="copyToClipboard('${result.short}', this)">複製</button>` : 
+                    '<span style="color: #ccc;">-</span>';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td>
+                            <span class="row-number">${index + 1}</span>
+                        </td>
+                        <td class="url-cell original-url">${result.original}</td>
+                        <td class="url-cell short-url">${result.short}</td>
+                        <td>${copyButton}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            
+            // 在表格前加入摘要
+            const summaryHtml = `
                 <div class="summary">
                     <div class="summary-item">
                         <span class="summary-label">總數:</span>
@@ -177,28 +377,29 @@
                         <span class="summary-value failed">${summary.failed}</span>
                     </div>
                 </div>
-                <div class="result-items">
             `;
 
-            resultsData.forEach((result, index) => {
-                const statusClass = result.success ? 'success' : 'failed';
-                const statusText = result.success ? '✓' : '✗';
-                
-                html += `
-                    <div class="result-item ${statusClass}">
-                        <div class="result-status">${statusText}</div>
-                        <div class="result-content">
-                            <div class="result-original">${result.original}</div>
-                            <div class="result-short">${result.short}</div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-            resultList.innerHTML = html;
+            resultList.innerHTML = summaryHtml + html;
             results.style.display = 'block';
             exportSection.style.display = 'block';
+        }
+
+        // 複製到剪貼簿
+        async function copyToClipboard(text, button) {
+            try {
+                await navigator.clipboard.writeText(text);
+                const originalText = button.textContent;
+                button.textContent = '已複製';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                console.error('複製失敗:', err);
+                alert('複製失敗，請手動複製');
+            }
         }
 
         // 匯出 CSV
@@ -258,6 +459,12 @@
         exportCsvBtn.addEventListener('click', exportCsv);
         exportQrZipBtn.addEventListener('click', openQrGallery);
 
+        // 更新行號
+        urlListInput.addEventListener('input', updateLineNumbers);
+        urlListInput.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = urlListInput.scrollTop;
+        });
+
         // 支援 Enter 鍵提交
         apiKeyInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -270,6 +477,12 @@
                 processUrls();
             }
         });
+
+        // 初始化行號
+        updateLineNumbers();
+
+        // 全域函數讓 HTML 可以調用
+        window.copyToClipboard = copyToClipboard;
     </script>
 </body>
 </html>
