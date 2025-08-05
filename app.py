@@ -1,71 +1,4 @@
-@app.route('/api/export/csv', methods=['POST', 'OPTIONS'])
-def export_csv():
-    """匯出 CSV - 英文版本測試"""
-    if request.method == 'OPTIONS':
-        return '', 200
-    
-    try:
-        data = request.get_json()
-        results = data.get('results', [])
-        
-        if not results:
-            return jsonify({'error': 'No data to export'}), 400
-        
-        # 使用標準 csv 模組
-        output = io.StringIO()
-        writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
-        
-        # 寫入英文標頭
-        writer.writerow(['No', 'Original URL', 'Short URL', 'Status', 'Process Time'])
-        
-        export_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # 寫入數據
-        for index, result in enumerate(results, 1):
-            writer.writerow([
-                index,
-                result.get('original', ''),
-                result.get('short', ''),
-                'Success' if result.get('success', False) else 'Failed',
-                export_time
-            ])
-        
-        # 加入英文摘要
-        total_count = len(results)
-        success_count = sum(1 for r in results if r.get('success', False))
-        
-        writer.writerow([])
-        writer.writerow(['=== Summary ==='])
-        writer.writerow(['Total', total_count])
-        writer.writerow(['Success', success_count])
-        writer.writerow(['Failed', total_count - success_count])
-        writer.writerow(['Success Rate', f'{(success_count/total_count*100):.1f}%'])
-        writer.writerow(['Export Time', export_time])
-        writer.writerow(['Tool', 'StreetVoice sv.link Batch Generator'])
-        
-        # 取得 CSV 內容
-        csv_content = output.getvalue()
-        output.close()
-        
-        # 直接編碼為 UTF-8，不加 BOM
-        csv_bytes = csv_content.encode('utf-8')
-        
-        # Base64 編碼
-        csv_base64 = base64.b64encode(csv_bytes).decode('ascii')
-        
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'sv-link-results_{timestamp}.csv'
-        
-        return jsonify({
-            'content': csv_base64,
-            'filename': filename,
-            'mimetype': 'text/csv',
-            'size': len(csv_bytes),
-            'encoding': 'base64'
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Export failed: {str(e)}'}), 500"""
+"""
 StreetVoice sv.link 批次短網址生成器 - Render 版本
 """
 
@@ -181,7 +114,7 @@ def shorten_urls():
 
 @app.route('/api/export/csv', methods=['POST', 'OPTIONS'])
 def export_csv():
-    """匯出 CSV - 修復編碼版本"""
+    """匯出 CSV - 英文版本測試"""
     if request.method == 'OPTIONS':
         return '', 200
     
@@ -190,14 +123,14 @@ def export_csv():
         results = data.get('results', [])
         
         if not results:
-            return jsonify({'error': '沒有可匯出的數據'}), 400
+            return jsonify({'error': 'No data to export'}), 400
         
-        # 使用標準 csv 模組，確保正確編碼
+        # 使用標準 csv 模組
         output = io.StringIO()
         writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
         
-        # 寫入標頭
-        writer.writerow(['序號', '原始網址', '短網址', '狀態', '處理時間'])
+        # 寫入英文標頭
+        writer.writerow(['No', 'Original URL', 'Short URL', 'Status', 'Process Time'])
         
         export_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
@@ -207,34 +140,32 @@ def export_csv():
                 index,
                 result.get('original', ''),
                 result.get('short', ''),
-                '成功' if result.get('success', False) else '失敗',
+                'Success' if result.get('success', False) else 'Failed',
                 export_time
             ])
         
-        # 加入摘要
+        # 加入英文摘要
         total_count = len(results)
         success_count = sum(1 for r in results if r.get('success', False))
         
         writer.writerow([])
-        writer.writerow(['=== 處理摘要 ==='])
-        writer.writerow(['總數量', total_count])
-        writer.writerow(['成功數量', success_count])
-        writer.writerow(['失敗數量', total_count - success_count])
-        writer.writerow(['成功率', f'{(success_count/total_count*100):.1f}%'])
-        writer.writerow(['匯出時間', export_time])
-        writer.writerow(['工具', 'StreetVoice sv.link 批次短網址生成器'])
+        writer.writerow(['=== Summary ==='])
+        writer.writerow(['Total', total_count])
+        writer.writerow(['Success', success_count])
+        writer.writerow(['Failed', total_count - success_count])
+        writer.writerow(['Success Rate', f'{(success_count/total_count*100):.1f}%'])
+        writer.writerow(['Export Time', export_time])
+        writer.writerow(['Tool', 'StreetVoice sv.link Batch Generator'])
         
         # 取得 CSV 內容
         csv_content = output.getvalue()
         output.close()
         
-        # 重要：先編碼為 UTF-8 bytes，再加 BOM
+        # 直接編碼為 UTF-8，不加 BOM
         csv_bytes = csv_content.encode('utf-8')
-        bom = '\ufeff'.encode('utf-8')
-        final_csv = bom + csv_bytes
         
         # Base64 編碼
-        csv_base64 = base64.b64encode(final_csv).decode('ascii')
+        csv_base64 = base64.b64encode(csv_bytes).decode('ascii')
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'sv-link-results_{timestamp}.csv'
@@ -242,13 +173,13 @@ def export_csv():
         return jsonify({
             'content': csv_base64,
             'filename': filename,
-            'mimetype': 'text/csv;charset=utf-8',
-            'size': len(final_csv),
+            'mimetype': 'text/csv',
+            'size': len(csv_bytes),
             'encoding': 'base64'
         })
         
     except Exception as e:
-        return jsonify({'error': f'匯出失敗: {str(e)}'}), 500
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
 
 @app.route('/api/qr/zip', methods=['POST', 'OPTIONS'])
 def export_qr_zip():
