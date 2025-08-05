@@ -173,7 +173,7 @@ def export_csv():
 
 @app.route('/api/qr/zip', methods=['POST', 'OPTIONS'])
 def export_qr_zip():
-    """下載單個 QR Code SVG - 測試版本"""
+    """批次生成 QR Code ZIP - 使用暫存檔案"""
     if request.method == 'OPTIONS':
         return '', 200
     
@@ -181,49 +181,124 @@ def export_qr_zip():
         data = request.get_json()
         results = data.get('results', [])
         
-        # 找到第一個成功的短網址
-        first_success = None
-        for result in results:
-            if result.get('success', False) and result.get('short'):
-                first_success = result
-                break
+        success_results = [r for r in results if r.get('success', False) and r.get('short')]
         
-        if not first_success:
+        if not success_results:
             return jsonify({'error': '沒有成功的短網址可生成 QR Code'}), 400
         
-        short_url = first_success.get('short', '')
+        # 建立暫存目錄
+        temp_dir = f"/tmp/qr_temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_files = []
         
         try:
-            # 生成 QR Code
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_M,
-                box_size=10,
-                border=4,
-            )
-            qr.add_data(short_url)
-            qr.make(fit=True)
+            # 步驟 1: 批次生成 SVG 檔案並暫存到磁碟
+            for index, result in enumerate(success_results, 1):
+                short_url = result.get('short', '')
+                
+                if not short_url:
+                    continue
+                
+                try:
+                    # 生成 QR Code
+                    qr = qrcode.QRCode(
+                        version=1,
+                        error_correction=qrcode.constants.ERROR_CORRECT_M,
+                        box_size=10,
+                        border=4,
+                    )
+                    qr.add_data(short_url)
+                    qr.make(fit=True)
+                    
+                    # 生成 SVG 內容
+                    svg_content = generate_qr_svg(qr, short_url, index)
+                    
+                    # 暫存到磁碟
+                    temp_filename = os.path.join(temp_dir, f"qrcode_{index:03d}.svg")
+                    with open(temp_filename, 'w', encoding='utf-8') as f:
+                        f.write(svg_content)
+                    
+                    temp_files.append(temp_filename)
+                    
+                except Exception as e:
+                    print(f"生成 QR Code {index} 失敗: {e}")
+                    continue
             
-            # 生成 SVG
-            svg_content = generate_qr_svg(qr, short_url, 1)
+            if not temp_files:
+                return jsonify({'error': '沒有成功生成任何 QR Code'}), 500
             
-            # 直接回傳 SVG 檔案
-            svg_bytes = svg_content.encode('utf-8')
-            svg_base64 = base64.b64encode(svg_bytes).decode('ascii')
+            # 步驟 2: 將暫存檔案打包成 ZIP
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            zip_filename = f"/tmp/sv-link-qrcodes_{timestamp}.zip"
+            
+            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for temp_file in temp_files:
+                    # 取得檔案名稱（不含路徑）
+                    arc_name = os.path.basename(temp_file)
+                    zf.write(temp_file, arc_name)
+            
+            # 讀取 ZIP 檔案內容
+            with open(zip_filename, 'rb') as f:
+                zip_content = f.read()
+            
+            # Base64 編碼
+            zip_base64 = base64.b64encode(zip_content).decode('ascii')
+            
+            # 步驟 3: 刪除暫存檔案
+            cleanup_temp_files(temp_files, temp_dir)
+            
+            # 步驟 4: 設定 ZIP 檔案 30 分鐘後自動清理
+            schedule_zip_cleanup(zip_filename, 30 * 60)  # 30 分鐘
             
             return jsonify({
-                'content': svg_base64,
-                'filename': 'qrcode.svg',
-                'mimetype': 'image/svg+xml',
-                'size': len(svg_bytes),
+                'content': zip_base64,
+                'filename': f'sv-link-qrcodes_{timestamp}.zip',
+                'mimetype': 'application/zip',
+                'size': len(zip_content),
                 'encoding': 'base64'
             })
             
         except Exception as e:
-            return jsonify({'error': f'QR Code 生成失敗: {str(e)}'}), 500
+            # 發生錯誤時清理暫存檔案
+            cleanup_temp_files(temp_files, temp_dir)
+            return jsonify({'error': f'ZIP 生成失敗: {str(e)}'}), 500
         
     except Exception as e:
         return jsonify({'error': f'處理失敗: {str(e)}'}), 500
+
+def cleanup_temp_files(temp_files, temp_dir):
+    """清理暫存檔案和目錄"""
+    try:
+        # 刪除暫存檔案
+        for temp_file in temp_files:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        
+        # 刪除暫存目錄
+        if os.path.exists(temp_dir):
+            os.rmdir(temp_dir)
+            
+    except Exception as e:
+        print(f"清理暫存檔案失敗: {e}")
+
+def schedule_zip_cleanup(zip_filename, delay_seconds):
+    """安排 ZIP 檔案延遲清理"""
+    import threading
+    import time
+    
+    def cleanup_zip():
+        try:
+            time.sleep(delay_seconds)
+            if os.path.exists(zip_filename):
+                os.remove(zip_filename)
+                print(f"已清理 ZIP 檔案: {zip_filename}")
+        except Exception as e:
+            print(f"清理 ZIP 檔案失敗: {e}")
+    
+    # 在背景執行緒中執行清理
+    cleanup_thread = threading.Thread(target=cleanup_zip, daemon=True)
+    cleanup_thread.start()
 
 def generate_qr_svg(qr, url, index):
     """生成 QR Code SVG"""
