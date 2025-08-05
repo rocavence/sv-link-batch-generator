@@ -5,152 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreetVoice 街聲 sv.link 批次短網址生成器</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        .url-input-wrapper {
-            position: relative;
-        }
-        
-        .line-numbers {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 40px;
-            background: #f8f9fa;
-            border-right: 1px solid #e9ecef;
-            border-radius: 8px 0 0 8px;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 0.85rem;
-            color: #6c757d;
-            padding: 12px 8px;
-            line-height: 1.5;
-            user-select: none;
-            pointer-events: none;
-            white-space: pre;
-        }
-        
-        #urlList {
-            padding-left: 50px !important;
-            resize: vertical;
-            min-height: 120px;
-        }
-        
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: var(--shadow);
-        }
-        
-        .results-table th {
-            background: var(--primary-color);
-            color: white;
-            padding: 15px 12px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        .results-table td {
-            padding: 12px;
-            border-bottom: 1px solid #f0f0f0;
-            vertical-align: middle;
-        }
-        
-        .results-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .results-table tr:hover {
-            background: #f8f9fa;
-        }
-        
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status-failed {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .row-number {
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            min-width: 30px;
-            text-align: center;
-        }
-        
-        .url-cell {
-            max-width: 300px;
-            word-break: break-all;
-            font-size: 0.9rem;
-        }
-        
-        .original-url {
-            color: var(--text-secondary);
-        }
-        
-        .short-url {
-            color: var(--primary-color);
-            font-weight: 500;
-        }
-        
-        .copy-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .copy-btn:hover {
-            background: var(--primary-hover);
-        }
-        
-        .copy-btn:active {
-            transform: scale(0.95);
-        }
-        
-        .copy-btn.copied {
-            background: #28a745;
-        }
-        
-        @media (max-width: 768px) {
-            .results-table {
-                font-size: 0.85rem;
-            }
-            
-            .results-table th,
-            .results-table td {
-                padding: 8px 6px;
-            }
-            
-            .url-cell {
-                max-width: 200px;
-            }
-        }
-    </style>
 </head>
 <body>
     <header class="header">
@@ -184,8 +38,6 @@
                 <div class="progress" id="progress">
                     <div class="progress-bar" id="progressBar"></div>
                 </div>
-
-                <div class="status-message" id="statusMessage"></div>
             </div>
 
             <div class="results" id="results">
@@ -221,7 +73,6 @@
         const btnText = document.getElementById('btnText');
         const progress = document.getElementById('progress');
         const progressBar = document.getElementById('progressBar');
-        const statusMessage = document.getElementById('statusMessage');
         const results = document.getElementById('results');
         const resultList = document.getElementById('resultList');
         const exportSection = document.getElementById('exportSection');
@@ -231,10 +82,10 @@
         // 更新行號
         function updateLineNumbers() {
             const lines = urlListInput.value.split('\n');
-            const lineCount = lines.length;
+            const lineCount = Math.max(lines.length, 1);
             let numbers = '';
             for (let i = 1; i <= lineCount; i++) {
-                numbers += i + '\n';
+                numbers += i + (i < lineCount ? '\n' : '');
             }
             lineNumbers.textContent = numbers;
         }
@@ -264,7 +115,6 @@
             // 設定載入狀態
             setLoading(true);
             showProgress(true);
-            updateStatus('正在處理網址...');
 
             try {
                 const response = await fetch('/api/shorten', {
@@ -286,10 +136,9 @@
 
                 currentResults = data.results;
                 displayResults(data.results, data.summary);
-                updateStatus(`處理完成！成功: ${data.summary.success}, 失敗: ${data.summary.failed}`);
 
             } catch (error) {
-                updateStatus(`錯誤: ${error.message}`);
+                alert(`錯誤: ${error.message}`);
                 console.error('處理錯誤:', error);
             } finally {
                 setLoading(false);
@@ -315,12 +164,6 @@
             }
         }
 
-        // 更新狀態訊息
-        function updateStatus(message) {
-            statusMessage.textContent = message;
-            statusMessage.style.display = 'block';
-        }
-
         // 顯示結果
         function displayResults(resultsData, summary) {
             let html = `
@@ -331,7 +174,7 @@
                             <th style="width: 60px;">編號</th>
                             <th>原始網址</th>
                             <th>短網址</th>
-                            <th style="width: 80px;">操作</th>
+                            <th style="width: 90px;">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -363,18 +206,18 @@
             
             // 在表格前加入摘要
             const summaryHtml = `
-                <div class="summary">
-                    <div class="summary-item">
-                        <span class="summary-label">總數:</span>
-                        <span class="summary-value">${summary.total}</span>
+                <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">總數:</span>
+                        <span style="font-weight: 600; color: #333;">${summary.total}</span>
                     </div>
-                    <div class="summary-item">
-                        <span class="summary-label">成功:</span>
-                        <span class="summary-value success">${summary.success}</span>
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">成功:</span>
+                        <span style="font-weight: 600; color: #28a745;">${summary.success}</span>
                     </div>
-                    <div class="summary-item">
-                        <span class="summary-label">失敗:</span>
-                        <span class="summary-value failed">${summary.failed}</span>
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">失敗:</span>
+                        <span style="font-weight: 600; color: #dc3545;">${summary.failed}</span>
                     </div>
                 </div>
             `;
@@ -459,7 +302,7 @@
         exportCsvBtn.addEventListener('click', exportCsv);
         exportQrZipBtn.addEventListener('click', openQrGallery);
 
-        // 更新行號
+        // 更新行號和同步滾動
         urlListInput.addEventListener('input', updateLineNumbers);
         urlListInput.addEventListener('scroll', () => {
             lineNumbers.scrollTop = urlListInput.scrollTop;

@@ -1,5 +1,19 @@
 /* StreetVoice 街聲風格 - sv.link 批次短網址生成器 */
 
+/* CSS 變數定義 */
+:root {
+    --primary-color: #FF6B6B;
+    --primary-hover: #e55555;
+    --text-color: #333;
+    --text-secondary: #6c757d;
+    --bg-light: #f8f9fa;
+    --bg-secondary: #f1f3f4;
+    --border-color: #e9ecef;
+    --border-light: #ecf0f1;
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --shadow-hover: 0 8px 25px rgba(0,0,0,0.15);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -110,6 +124,40 @@ body {
     font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
     font-size: 14px;
     line-height: 1.5;
+}
+
+/* 行號相關樣式 */
+.url-input-wrapper {
+    position: relative;
+    display: flex;
+}
+
+.line-numbers {
+    width: 40px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 14px;
+    color: #6c757d;
+    padding: 15px 8px;
+    line-height: 1.5;
+    user-select: none;
+    pointer-events: none;
+    white-space: pre;
+    overflow: hidden;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+#urlList {
+    flex: 1;
+    border-radius: 0 8px 8px 0 !important;
+    border-left: none !important;
+    resize: vertical;
+    min-height: 150px;
+    margin: 0 !important;
 }
 
 /* 按鈕樣式 */
@@ -252,6 +300,106 @@ body {
     word-break: break-all;
 }
 
+/* 結果表格樣式 */
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.results-table th {
+    background: #6c757d;
+    color: white;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.results-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.results-table tr:last-child td {
+    border-bottom: none;
+}
+
+.results-table tr:hover {
+    background: #f8f9fa;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.row-number {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 30px;
+    text-align: center;
+}
+
+.url-cell {
+    max-width: 300px;
+    word-break: break-all;
+    font-size: 0.9rem;
+}
+
+.original-url {
+    color: var(--text-secondary);
+}
+
+.short-url {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.copy-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 50px;
+    text-align: center;
+    display: inline-block;
+}
+
+.copy-btn:hover {
+    background: #5a6268;
+}
+
+.copy-btn:active {
+    transform: scale(0.95);
+}
+
+.copy-btn.copied {
+    background: #28a745;
+}
+
 /* 匯出區域 */
 .export-section {
     background: #f8f9fa;
@@ -273,6 +421,214 @@ body {
     gap: 15px;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+/* QR Gallery 專用樣式 - 超緊湊版 */
+.gallery-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.back-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.back-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.gallery-header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.gallery-title {
+    font-size: 1.8rem;
+    color: var(--text-color);
+    margin-bottom: 3px;
+    font-weight: 700;
+}
+
+.gallery-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.gallery .loading {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 30px 0;
+}
+
+.gallery .error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+    color: #721c24;
+    text-align: center;
+}
+
+.gallery .stats {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 70px;
+}
+
+.qr-card {
+    background: white;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.qr-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.qr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.qr-number {
+    background: #333;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.qr-filename {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.qr-display {
+    text-align: center;
+    margin: 8px 0;
+    padding: 8px;
+    background: var(--bg-light);
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+}
+
+.qr-display svg {
+    max-width: 120px;
+    height: auto;
+    border-radius: 3px;
+}
+
+.qr-info {
+    margin-top: 8px;
+}
+
+.qr-url {
+    margin: 6px 0;
+    padding: 6px 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    border-left: 2px solid #333;
+}
+
+.qr-url strong {
+    color: var(--text-color);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.qr-url a {
+    color: #333;
+    text-decoration: none;
+    word-break: break-all;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.qr-url a:hover {
+    text-decoration: underline;
+}
+
+.download-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 16px;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 25px;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-hover);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 100px;
+    height: 40px;
+}
+
+.download-fab:hover {
+    transform: scale(1.05);
+    background: var(--primary-hover);
+}
+
+.download-fab:active {
+    transform: scale(0.95);
+}
+
+.download-fab:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.download-fab .icon {
+    font-size: 16px;
 }
 
 /* Footer */
@@ -329,6 +685,51 @@ body {
     .header {
         margin-bottom: 30px;
     }
+    
+    .results-table {
+        font-size: 0.85rem;
+    }
+    
+    .results-table th,
+    .results-table td {
+        padding: 8px 6px;
+    }
+    
+    .url-cell {
+        max-width: 200px;
+    }
+    
+    /* QR Gallery 手機版 */
+    .gallery-container {
+        padding: 8px;
+    }
+    
+    .gallery {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 10px;
+        margin-bottom: 60px;
+    }
+    
+    .gallery-title {
+        font-size: 1.5rem;
+    }
+    
+    .download-fab {
+        bottom: 12px;
+        right: 12px;
+        padding: 8px 12px;
+        font-size: 12px;
+        min-width: 85px;
+        height: 35px;
+    }
+    
+    .qr-card {
+        padding: 10px;
+    }
+    
+    .qr-display svg {
+        max-width: 100px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -349,5 +750,17 @@ body {
     
     .result-item {
         padding: 12px 15px;
+    }
+    
+    /* QR Gallery 小螢幕 */
+    .gallery {
+        grid-template-columns: 1fr;
+    }
+    
+    .download-fab {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        min-width: auto;
     }
 }
