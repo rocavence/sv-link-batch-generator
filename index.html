@@ -3,55 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreetVoice 街聲 sv.link 批次短網址生成器</title>
+    <title>StreetVoice 街聲 sv.link 批次工具</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <header class="header">
         <div class="header-content">
             <div class="logo">StreetVoice 街聲</div>
-            <div class="subtitle">sv.link 批次短網址生成器</div>
+            <div class="subtitle">sv.link 批次工具</div>
         </div>
     </header>
 
     <div class="container">
-        <div class="main-card">
-            <div class="form-section">
-                <div class="form-group">
-                    <label for="apiKey">sv.link API Key</label>
-                    <input type="password" id="apiKey" placeholder="請輸入您的 API Key">
-                </div>
+        <!-- 選單切換 -->
+        <div class="tab-container">
+            <button class="tab-btn active" id="generateTab" onclick="switchTab('generate')">
+                🔗 批次生成
+            </button>
+            <button class="tab-btn" id="lookupTab" onclick="switchTab('lookup')">
+                📊 批次反查
+            </button>
+        </div>
 
-                <div class="form-group">
-                    <label for="urlList">要縮短的網址清單（每行一個）</label>
-                    <div class="url-input-wrapper">
-                        <div class="line-numbers" id="lineNumbers">1</div>
-                        <textarea id="urlList" placeholder="https://streetvoice.com/artist1/&#10;https://streetvoice.com/artist2/&#10;https://streetvoice.com/artist3/"></textarea>
+        <!-- 批次生成介面 -->
+        <div class="tab-content active" id="generateContent">
+            <div class="main-card">
+                <div class="form-section">
+                    <div class="form-group">
+                        <label for="apiKey">sv.link API Key</label>
+                        <input type="password" id="apiKey" placeholder="請輸入您的 API Key">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="urlList">要縮短的網址清單（每行一個）</label>
+                        <div class="url-input-wrapper">
+                            <div class="line-numbers" id="lineNumbers">1</div>
+                            <textarea id="urlList" placeholder="https://streetvoice.com/artist1/&#10;https://streetvoice.com/artist2/&#10;https://streetvoice.com/artist3/"></textarea>
+                        </div>
+                    </div>
+
+                    <button class="btn" id="processBtn">
+                        <div class="loading" id="loading"></div>
+                        <span id="btnText">開始處理</span>
+                    </button>
+
+                    <div class="progress" id="progress">
+                        <div class="progress-bar" id="progressBar"></div>
                     </div>
                 </div>
 
-                <button class="btn" id="processBtn">
-                    <div class="loading" id="loading"></div>
-                    <span id="btnText">開始處理</span>
-                </button>
+                <div class="results" id="results">
+                    <div class="form-section">
+                        <h3>處理結果</h3>
+                        <div id="resultList"></div>
+                    </div>
+                </div>
 
-                <div class="progress" id="progress">
-                    <div class="progress-bar" id="progressBar"></div>
+                <div class="export-section" id="exportSection">
+                    <h3>匯出選項</h3>
+                    <div class="export-buttons">
+                        <button class="btn" id="exportCsv">📄 匯出 CSV</button>
+                        <button class="btn btn-secondary" id="exportQrZip">🎨 預覽 QR Code</button>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="results" id="results">
+        <!-- 批次反查介面 -->
+        <div class="tab-content" id="lookupContent">
+            <div class="main-card">
                 <div class="form-section">
-                    <h3>處理結果</h3>
-                    <div id="resultList"></div>
-                </div>
-            </div>
+                    <div class="form-group">
+                        <label for="lookupApiKey">sv.link API Key</label>
+                        <input type="password" id="lookupApiKey" placeholder="請輸入您的 API Key">
+                    </div>
 
-            <div class="export-section" id="exportSection">
-                <h3>匯出選項</h3>
-                <div class="export-buttons">
-                    <button class="btn" id="exportCsv">📄 匯出 CSV</button>
-                    <button class="btn btn-secondary" id="exportQrZip">🎨 預覽 QR Code</button>
+                    <div class="form-group">
+                        <label for="linkList">要反查的短網址清單（每行一個）</label>
+                        <div class="url-input-wrapper">
+                            <div class="line-numbers" id="lookupLineNumbers">1</div>
+                            <textarea id="linkList" placeholder="https://sv.link/kDBwcE&#10;https://sv.link/DBHMSG&#10;https://sv.link/cfhn2Q"></textarea>
+                        </div>
+                    </div>
+
+                    <button class="btn" id="lookupBtn">
+                        <div class="loading" id="lookupLoading"></div>
+                        <span id="lookupBtnText">開始反查</span>
+                    </button>
+
+                    <div class="progress" id="lookupProgress">
+                        <div class="progress-bar" id="lookupProgressBar"></div>
+                    </div>
+                </div>
+
+                <div class="results" id="lookupResults">
+                    <div class="form-section">
+                        <h3>反查結果</h3>
+                        <div id="lookupResultList"></div>
+                    </div>
+                </div>
+
+                <div class="export-section" id="lookupExportSection">
+                    <h3>匯出選項</h3>
+                    <div class="export-buttons">
+                        <button class="btn" id="lookupExportCsv">📄 匯出 CSV</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -63,8 +119,9 @@
 
     <script>
         let currentResults = [];
+        let currentLookupResults = [];
 
-        // DOM 元素
+        // DOM 元素 - 生成功能
         const apiKeyInput = document.getElementById('apiKey');
         const urlListInput = document.getElementById('urlList');
         const lineNumbers = document.getElementById('lineNumbers');
@@ -79,7 +136,41 @@
         const exportCsvBtn = document.getElementById('exportCsv');
         const exportQrZipBtn = document.getElementById('exportQrZip');
 
-        // 更新行號
+        // DOM 元素 - 反查功能
+        const lookupApiKeyInput = document.getElementById('lookupApiKey');
+        const linkListInput = document.getElementById('linkList');
+        const lookupLineNumbers = document.getElementById('lookupLineNumbers');
+        const lookupBtn = document.getElementById('lookupBtn');
+        const lookupLoading = document.getElementById('lookupLoading');
+        const lookupBtnText = document.getElementById('lookupBtnText');
+        const lookupProgress = document.getElementById('lookupProgress');
+        const lookupProgressBar = document.getElementById('lookupProgressBar');
+        const lookupResults = document.getElementById('lookupResults');
+        const lookupResultList = document.getElementById('lookupResultList');
+        const lookupExportSection = document.getElementById('lookupExportSection');
+        const lookupExportCsvBtn = document.getElementById('lookupExportCsv');
+
+        // 選單切換功能
+        function switchTab(tab) {
+            // 移除所有 active 狀態
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // 設定新的 active 狀態
+            document.getElementById(tab + 'Tab').classList.add('active');
+            document.getElementById(tab + 'Content').classList.add('active');
+            
+            // 重置結果區域
+            if (tab === 'generate') {
+                results.style.display = 'none';
+                exportSection.style.display = 'none';
+            } else {
+                lookupResults.style.display = 'none';
+                lookupExportSection.style.display = 'none';
+            }
+        }
+
+        // 更新行號（生成）
         function updateLineNumbers() {
             const lines = urlListInput.value.split('\n');
             const lineCount = Math.max(lines.length, 1);
@@ -90,7 +181,18 @@
             lineNumbers.textContent = numbers;
         }
 
-        // 處理短網址
+        // 更新行號（反查）
+        function updateLookupLineNumbers() {
+            const lines = linkListInput.value.split('\n');
+            const lineCount = Math.max(lines.length, 1);
+            let numbers = '';
+            for (let i = 1; i <= lineCount; i++) {
+                numbers += i + (i < lineCount ? '\n' : '');
+            }
+            lookupLineNumbers.textContent = numbers;
+        }
+
+        // 處理短網址生成
         async function processUrls() {
             const apiKey = apiKeyInput.value.trim();
             const urlText = urlListInput.value.trim();
@@ -112,7 +214,6 @@
                 return;
             }
 
-            // 設定載入狀態
             setLoading(true);
             showProgress(true);
 
@@ -146,11 +247,72 @@
             }
         }
 
+        // 處理短網址反查
+        async function lookupUrls() {
+            const apiKey = lookupApiKeyInput.value.trim();
+            const linkText = linkListInput.value.trim();
+
+            if (!apiKey) {
+                alert('請輸入 API Key');
+                return;
+            }
+
+            if (!linkText) {
+                alert('請輸入要反查的短網址');
+                return;
+            }
+
+            const links = linkText.split('\n').filter(link => link.trim());
+
+            if (links.length === 0) {
+                alert('請輸入有效的短網址');
+                return;
+            }
+
+            setLookupLoading(true);
+            showLookupProgress(true);
+
+            try {
+                const response = await fetch('/api/lookup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        links: links
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '反查失敗');
+                }
+
+                currentLookupResults = data.results;
+                displayLookupResults(data.results, data.summary);
+
+            } catch (error) {
+                alert(`錯誤: ${error.message}`);
+                console.error('反查錯誤:', error);
+            } finally {
+                setLookupLoading(false);
+                showLookupProgress(false);
+            }
+        }
+
         // 設定載入狀態
         function setLoading(isLoading) {
             processBtn.disabled = isLoading;
             loading.style.display = isLoading ? 'block' : 'none';
             btnText.textContent = isLoading ? '處理中...' : '開始處理';
+        }
+
+        function setLookupLoading(isLoading) {
+            lookupBtn.disabled = isLoading;
+            lookupLoading.style.display = isLoading ? 'block' : 'none';
+            lookupBtnText.textContent = isLoading ? '反查中...' : '開始反查';
         }
 
         // 顯示進度條
@@ -164,7 +326,17 @@
             }
         }
 
-        // 顯示結果
+        function showLookupProgress(show) {
+            lookupProgress.style.display = show ? 'block' : 'none';
+            if (show) {
+                lookupProgressBar.style.width = '0%';
+                setTimeout(() => {
+                    lookupProgressBar.style.width = '100%';
+                }, 100);
+            }
+        }
+
+        // 顯示生成結果
         function displayResults(resultsData, summary) {
             let html = `
                 <table class="results-table">
@@ -204,7 +376,6 @@
 
             html += '</tbody></table>';
             
-            // 在表格前加入摘要
             const summaryHtml = `
                 <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                     <div>
@@ -225,6 +396,70 @@
             resultList.innerHTML = summaryHtml + html;
             results.style.display = 'block';
             exportSection.style.display = 'block';
+        }
+
+        // 顯示反查結果
+        function displayLookupResults(resultsData, summary) {
+            let html = `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">狀態</th>
+                            <th style="width: 60px;">編號</th>
+                            <th>短網址</th>
+                            <th style="width: 100px;">觀看次數</th>
+                            <th>目標網址</th>
+                            <th style="width: 90px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            resultsData.forEach((result, index) => {
+                const statusClass = result.success ? 'status-success' : 'status-failed';
+                const statusText = result.success ? '成功' : '失敗';
+                const copyButton = result.success ? 
+                    `<button class="copy-btn" onclick="copyToClipboard('${result.views}', this)">複製</button>` : 
+                    '<span style="color: #ccc;">-</span>';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td>
+                            <span class="row-number">${index + 1}</span>
+                        </td>
+                        <td class="url-cell short-url">${result.link}</td>
+                        <td style="text-align: center; font-weight: 600; color: #FF6B6B;">${result.views}</td>
+                        <td class="url-cell original-url">${result.target}</td>
+                        <td>${copyButton}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            
+            const summaryHtml = `
+                <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">總數:</span>
+                        <span style="font-weight: 600; color: #333;">${summary.total}</span>
+                    </div>
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">成功:</span>
+                        <span style="font-weight: 600; color: #28a745;">${summary.success}</span>
+                    </div>
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">失敗:</span>
+                        <span style="font-weight: 600; color: #dc3545;">${summary.failed}</span>
+                    </div>
+                </div>
+            `;
+
+            lookupResultList.innerHTML = summaryHtml + html;
+            lookupResults.style.display = 'block';
+            lookupExportSection.style.display = 'block';
         }
 
         // 複製到剪貼簿
@@ -269,7 +504,43 @@
                     throw new Error(data.error || '匯出失敗');
                 }
 
-                // 下載檔案
+                const blob = new Blob([atob(data.content)], { type: data.mimetype });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = data.filename;
+                link.click();
+                URL.revokeObjectURL(url);
+
+            } catch (error) {
+                alert(`匯出失敗: ${error.message}`);
+            }
+        }
+
+        // 匯出反查 CSV
+        async function exportLookupCsv() {
+            if (!currentLookupResults || currentLookupResults.length === 0) {
+                alert('請先進行反查');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/export/lookup-csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        results: currentLookupResults
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '匯出失敗');
+                }
+
                 const blob = new Blob([atob(data.content)], { type: data.mimetype });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -290,22 +561,26 @@
                 return;
             }
 
-            // 儲存結果到 sessionStorage
             sessionStorage.setItem('qr_results', JSON.stringify(currentResults));
-            
-            // 跳轉到 QR Gallery
             window.open('/qr-gallery', '_blank');
         }
 
         // 事件監聽器
         processBtn.addEventListener('click', processUrls);
+        lookupBtn.addEventListener('click', lookupUrls);
         exportCsvBtn.addEventListener('click', exportCsv);
+        lookupExportCsvBtn.addEventListener('click', exportLookupCsv);
         exportQrZipBtn.addEventListener('click', openQrGallery);
 
         // 更新行號和同步滾動
         urlListInput.addEventListener('input', updateLineNumbers);
         urlListInput.addEventListener('scroll', () => {
             lineNumbers.scrollTop = urlListInput.scrollTop;
+        });
+
+        linkListInput.addEventListener('input', updateLookupLineNumbers);
+        linkListInput.addEventListener('scroll', () => {
+            lookupLineNumbers.scrollTop = linkListInput.scrollTop;
         });
 
         // 支援 Enter 鍵提交
@@ -315,17 +590,19 @@
             }
         });
 
-        urlListInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                processUrls();
+        lookupApiKeyInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                lookupUrls();
             }
         });
 
         // 初始化行號
         updateLineNumbers();
+        updateLookupLineNumbers();
 
         // 全域函數讓 HTML 可以調用
         window.copyToClipboard = copyToClipboard;
+        window.switchTab = switchTab;
     </script>
 </body>
 </html>
