@@ -82,8 +82,8 @@ class SVLinkBatchGenerator {
             // 顯示處理開始訊息
             this.showStatus(`開始處理 ${urls.length} 個網址...`, 'success');
 
-            // 呼叫 Netlify Function
-            const response = await fetch('/.netlify/functions/shorten_url', {
+            // 呼叫 Render API
+            const response = await fetch('/api/shorten', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -189,7 +189,7 @@ class SVLinkBatchGenerator {
         }
 
         try {
-            const response = await fetch('/.netlify/functions/export_data', {
+            const response = await fetch('/api/export/csv', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -230,38 +230,30 @@ class SVLinkBatchGenerator {
             return;
         }
 
-        // 檢查必要的庫是否載入
-        if (typeof JSZip === 'undefined') {
-            this.showStatus('JSZip 庫未載入，無法生成 ZIP 檔案', 'error');
-            return;
-        }
-
-        if (typeof QRCode === 'undefined') {
-            this.showStatus('QRCode 庫未載入，無法生成 QR Code', 'error');
-            return;
-        }
-
         try {
             this.showStatus(`正在生成 ${successResults.length} 個 QR Code...`, 'success');
             
-            const zip = new JSZip();
+            const response = await fetch('/api/qr/zip', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    results: this.results
+                })
+            });
 
-            // 生成所有 QR Code
-            for (let result of successResults) {
-                try {
-                    const qrSvg = await this.generateQrSvg(result.short);
-                    const filename = this.getFilenameFromUrl(result.original);
-                    zip.file(`${filename}.svg`, qrSvg);
-                } catch (error) {
-                    console.error('生成 QR Code 失敗:', error);
-                }
+            const data = await response.json();
+
+            if (response.ok && data.content) {
+                // 解碼 base64 內容
+                const zipContent = atob(data.content);
+                const blob = new Blob([zipContent], { type: 'application/zip' });
+                this.downloadBlob(blob, data.filename || 'sv-link-qrcodes.zip');
+                this.showStatus(`QR Code ZIP 已下載 (${successResults.length} 個)`, 'success');
+            } else {
+                throw new Error(data.error || 'QR Code 生成失敗');
             }
-
-            // 生成 ZIP 檔案
-            const zipBlob = await zip.generateAsync({ type: 'blob' });
-            this.downloadBlob(zipBlob, 'sv-link-qrcodes.zip');
-            
-            this.showStatus(`QR Code ZIP 已下載 (${successResults.length} 個)`, 'success');
 
         } catch (error) {
             console.error('QR Code ZIP 匯出錯誤:', error);
@@ -374,11 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 檢查必要的依賴
     if (typeof JSZip === 'undefined') {
-        console.warn('JSZip 庫未載入，ZIP 匯出功能將無法使用');
-    }
-    
-    if (typeof QRCode === 'undefined') {
-        console.warn('QRCode 庫未載入，QR Code 生成功能將無法使用');
+        console.warn('JSZip 庫未載入，使用後端 QR Code 生成');
     }
     
     // 啟動應用程式
