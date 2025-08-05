@@ -1,4 +1,71 @@
-"""
+@app.route('/api/export/csv', methods=['POST', 'OPTIONS'])
+def export_csv():
+    """匯出 CSV - 英文版本測試"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    try:
+        data = request.get_json()
+        results = data.get('results', [])
+        
+        if not results:
+            return jsonify({'error': 'No data to export'}), 400
+        
+        # 使用標準 csv 模組
+        output = io.StringIO()
+        writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+        
+        # 寫入英文標頭
+        writer.writerow(['No', 'Original URL', 'Short URL', 'Status', 'Process Time'])
+        
+        export_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # 寫入數據
+        for index, result in enumerate(results, 1):
+            writer.writerow([
+                index,
+                result.get('original', ''),
+                result.get('short', ''),
+                'Success' if result.get('success', False) else 'Failed',
+                export_time
+            ])
+        
+        # 加入英文摘要
+        total_count = len(results)
+        success_count = sum(1 for r in results if r.get('success', False))
+        
+        writer.writerow([])
+        writer.writerow(['=== Summary ==='])
+        writer.writerow(['Total', total_count])
+        writer.writerow(['Success', success_count])
+        writer.writerow(['Failed', total_count - success_count])
+        writer.writerow(['Success Rate', f'{(success_count/total_count*100):.1f}%'])
+        writer.writerow(['Export Time', export_time])
+        writer.writerow(['Tool', 'StreetVoice sv.link Batch Generator'])
+        
+        # 取得 CSV 內容
+        csv_content = output.getvalue()
+        output.close()
+        
+        # 直接編碼為 UTF-8，不加 BOM
+        csv_bytes = csv_content.encode('utf-8')
+        
+        # Base64 編碼
+        csv_base64 = base64.b64encode(csv_bytes).decode('ascii')
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'sv-link-results_{timestamp}.csv'
+        
+        return jsonify({
+            'content': csv_base64,
+            'filename': filename,
+            'mimetype': 'text/csv',
+            'size': len(csv_bytes),
+            'encoding': 'base64'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500"""
 StreetVoice sv.link 批次短網址生成器 - Render 版本
 """
 
