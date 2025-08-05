@@ -50,7 +50,7 @@
                 <h3>匯出選項</h3>
                 <div class="export-buttons">
                     <button class="btn" id="exportCsv">📄 匯出 CSV</button>
-                    <button class="btn btn-secondary" id="exportQrZip">📦 下載 QR Code ZIP</button>
+                    <button class="btn btn-secondary" id="exportQrZip">🎨 預覽 QR Code</button>
                 </div>
             </div>
         </div>
@@ -60,6 +60,216 @@
         <p>© StreetVoice 街聲</p>
     </footer>
 
-    <script src="/static/js/app.js"></script>
+    <script>
+        let currentResults = [];
+
+        // DOM 元素
+        const apiKeyInput = document.getElementById('apiKey');
+        const urlListInput = document.getElementById('urlList');
+        const processBtn = document.getElementById('processBtn');
+        const loading = document.getElementById('loading');
+        const btnText = document.getElementById('btnText');
+        const progress = document.getElementById('progress');
+        const progressBar = document.getElementById('progressBar');
+        const statusMessage = document.getElementById('statusMessage');
+        const results = document.getElementById('results');
+        const resultList = document.getElementById('resultList');
+        const exportSection = document.getElementById('exportSection');
+        const exportCsvBtn = document.getElementById('exportCsv');
+        const exportQrZipBtn = document.getElementById('exportQrZip');
+
+        // 處理短網址
+        async function processUrls() {
+            const apiKey = apiKeyInput.value.trim();
+            const urlText = urlListInput.value.trim();
+
+            if (!apiKey) {
+                alert('請輸入 API Key');
+                return;
+            }
+
+            if (!urlText) {
+                alert('請輸入要縮短的網址');
+                return;
+            }
+
+            const urls = urlText.split('\n').filter(url => url.trim());
+
+            if (urls.length === 0) {
+                alert('請輸入有效的網址');
+                return;
+            }
+
+            // 設定載入狀態
+            setLoading(true);
+            showProgress(true);
+            updateStatus('正在處理網址...');
+
+            try {
+                const response = await fetch('/api/shorten', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        urls: urls
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '處理失敗');
+                }
+
+                currentResults = data.results;
+                displayResults(data.results, data.summary);
+                updateStatus(`處理完成！成功: ${data.summary.success}, 失敗: ${data.summary.failed}`);
+
+            } catch (error) {
+                updateStatus(`錯誤: ${error.message}`);
+                console.error('處理錯誤:', error);
+            } finally {
+                setLoading(false);
+                showProgress(false);
+            }
+        }
+
+        // 設定載入狀態
+        function setLoading(isLoading) {
+            processBtn.disabled = isLoading;
+            loading.style.display = isLoading ? 'block' : 'none';
+            btnText.textContent = isLoading ? '處理中...' : '開始處理';
+        }
+
+        // 顯示進度條
+        function showProgress(show) {
+            progress.style.display = show ? 'block' : 'none';
+            if (show) {
+                progressBar.style.width = '0%';
+                setTimeout(() => {
+                    progressBar.style.width = '100%';
+                }, 100);
+            }
+        }
+
+        // 更新狀態訊息
+        function updateStatus(message) {
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+        }
+
+        // 顯示結果
+        function displayResults(resultsData, summary) {
+            let html = `
+                <div class="summary">
+                    <div class="summary-item">
+                        <span class="summary-label">總數:</span>
+                        <span class="summary-value">${summary.total}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">成功:</span>
+                        <span class="summary-value success">${summary.success}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">失敗:</span>
+                        <span class="summary-value failed">${summary.failed}</span>
+                    </div>
+                </div>
+                <div class="result-items">
+            `;
+
+            resultsData.forEach((result, index) => {
+                const statusClass = result.success ? 'success' : 'failed';
+                const statusText = result.success ? '✓' : '✗';
+                
+                html += `
+                    <div class="result-item ${statusClass}">
+                        <div class="result-status">${statusText}</div>
+                        <div class="result-content">
+                            <div class="result-original">${result.original}</div>
+                            <div class="result-short">${result.short}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultList.innerHTML = html;
+            results.style.display = 'block';
+            exportSection.style.display = 'block';
+        }
+
+        // 匯出 CSV
+        async function exportCsv() {
+            if (!currentResults || currentResults.length === 0) {
+                alert('請先生成短網址');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/export/csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        results: currentResults
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '匯出失敗');
+                }
+
+                // 下載檔案
+                const blob = new Blob([atob(data.content)], { type: data.mimetype });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = data.filename;
+                link.click();
+                URL.revokeObjectURL(url);
+
+            } catch (error) {
+                alert(`匯出失敗: ${error.message}`);
+            }
+        }
+
+        // 跳轉到 QR Code Gallery
+        function openQrGallery() {
+            if (!currentResults || currentResults.length === 0) {
+                alert('請先生成短網址');
+                return;
+            }
+
+            // 儲存結果到 sessionStorage
+            sessionStorage.setItem('qr_results', JSON.stringify(currentResults));
+            
+            // 跳轉到 QR Gallery
+            window.open('/qr-gallery', '_blank');
+        }
+
+        // 事件監聽器
+        processBtn.addEventListener('click', processUrls);
+        exportCsvBtn.addEventListener('click', exportCsv);
+        exportQrZipBtn.addEventListener('click', openQrGallery);
+
+        // 支援 Enter 鍵提交
+        apiKeyInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                processUrls();
+            }
+        });
+
+        urlListInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                processUrls();
+            }
+        });
+    </script>
 </body>
 </html>

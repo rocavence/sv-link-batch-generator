@@ -171,9 +171,14 @@ def export_csv():
     except Exception as e:
         return jsonify({'error': f'Export failed: {str(e)}'}), 500
 
-@app.route('/api/qr/zip', methods=['POST', 'OPTIONS'])
-def export_qr_zip():
-    """最簡單的批次 QR Code - 複製單個成功邏輯"""
+@app.route('/qr-gallery')
+def qr_gallery():
+    """QR Code 展示頁面"""
+    return send_from_directory('.', 'qr-gallery.html')
+
+@app.route('/api/qr/generate', methods=['POST', 'OPTIONS'])
+def generate_qr_codes():
+    """生成所有 QR Code SVG 資料"""
     if request.method == 'OPTIONS':
         return '', 200
     
@@ -186,17 +191,17 @@ def export_qr_zip():
         if not success_results:
             return jsonify({'error': '沒有成功的短網址可生成 QR Code'}), 400
         
-        # 建立 ZIP
-        zip_buffer = io.BytesIO()
+        qr_codes = []
         
-        with zipfile.ZipFile(zip_buffer, 'w') as zf:
-            for index, result in enumerate(success_results, 1):
-                short_url = result.get('short', '')
-                
-                if not short_url:
-                    continue
-                
-                # 使用跟單個 SVG 完全一樣的邏輯
+        for index, result in enumerate(success_results, 1):
+            short_url = result.get('short', '')
+            original_url = result.get('original', '')
+            
+            if not short_url:
+                continue
+            
+            try:
+                # 生成 QR Code
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -206,28 +211,27 @@ def export_qr_zip():
                 qr.add_data(short_url)
                 qr.make(fit=True)
                 
+                # 生成 SVG
                 svg_content = generate_qr_svg(qr, short_url, index)
                 
-                # 寫入 ZIP
-                filename = f"qrcode_{index:03d}.svg"
-                zf.writestr(filename, svg_content)
-        
-        # 讀取 ZIP 內容
-        zip_content = zip_buffer.getvalue()
-        zip_base64 = base64.b64encode(zip_content).decode()
-        
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                qr_codes.append({
+                    'index': index,
+                    'filename': f'qrcode_{index:03d}.svg',
+                    'svg_content': svg_content,
+                    'short_url': short_url,
+                    'original_url': original_url
+                })
+                
+            except Exception as e:
+                continue
         
         return jsonify({
-            'content': zip_base64,
-            'filename': f'sv-link-qrcodes_{timestamp}.zip',
-            'mimetype': 'application/zip',
-            'size': len(zip_content),
-            'encoding': 'base64'
+            'qr_codes': qr_codes,
+            'total': len(qr_codes)
         })
         
     except Exception as e:
-        return jsonify({'error': f'處理失敗: {str(e)}'}), 500
+        return jsonify({'error': f'生成失敗: {str(e)}'}), 500
 
 def generate_qr_svg(qr, url, index):
     """生成 QR Code SVG"""

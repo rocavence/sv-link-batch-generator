@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Gallery - StreetVoice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin: 60px 0;
+        }
+        
+        .error {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #ff6b6b;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 80px;
+        }
+        
+        .qr-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .qr-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        .qr-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .qr-number {
+            background: #FF6B6B;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .qr-filename {
+            font-size: 0.8rem;
+            color: #666;
+            margin-left: auto;
+        }
+        
+        .qr-display {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #f0f0f0;
+        }
+        
+        .qr-display svg {
+            max-width: 200px;
+            height: auto;
+        }
+        
+        .qr-info {
+            margin-top: 15px;
+        }
+        
+        .qr-url {
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border-left: 3px solid #FF6B6B;
+        }
+        
+        .qr-url strong {
+            color: #333;
+        }
+        
+        .qr-url a {
+            color: #007bff;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        
+        .qr-url a:hover {
+            text-decoration: underline;
+        }
+        
+        .download-fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: #FF6B6B;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .download-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+        }
+        
+        .download-fab:active {
+            transform: scale(0.95);
+        }
+        
+        .download-fab:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stats {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .download-fab {
+                bottom: 20px;
+                right: 20px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← 回到主頁</a>
+        
+        <div class="header">
+            <h1>QR Code Gallery</h1>
+            <p>預覽並下載所有 QR Code</p>
+        </div>
+        
+        <div id="loading" class="loading">
+            正在生成 QR Code...
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="stats" class="stats" style="display: none;"></div>
+        
+        <div id="gallery" class="gallery"></div>
+    </div>
+    
+    <button id="downloadBtn" class="download-fab" style="display: none;" title="打包下載所有 QR Code">
+        📦
+    </button>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        let qrData = [];
+        
+        // 從 URL 參數或 sessionStorage 取得結果
+        function getResultsData() {
+            // 先試著從 sessionStorage 取得
+            const storedResults = sessionStorage.getItem('qr_results');
+            if (storedResults) {
+                return JSON.parse(storedResults);
+            }
+            
+            // 如果沒有資料，返回空陣列
+            return [];
+        }
+        
+        // 生成 QR Code
+        async function generateQRCodes() {
+            const results = getResultsData();
+            
+            if (!results || results.length === 0) {
+                showError('沒有找到短網址資料，請回到主頁重新生成。');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/qr/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ results })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '生成失敗');
+                }
+                
+                qrData = data.qr_codes;
+                displayQRCodes(qrData);
+                showStats(data.total);
+                
+            } catch (error) {
+                showError(`生成 QR Code 失敗: ${error.message}`);
+            }
+        }
+        
+        // 顯示錯誤
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        // 顯示統計
+        function showStats(total) {
+            document.getElementById('loading').style.display = 'none';
+            const statsDiv = document.getElementById('stats');
+            statsDiv.textContent = `成功生成 ${total} 個 QR Code`;
+            statsDiv.style.display = 'block';
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.style.display = 'flex';
+        }
+        
+        // 顯示 QR Code
+        function displayQRCodes(qrCodes) {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+            
+            qrCodes.forEach(qr => {
+                const card = document.createElement('div');
+                card.className = 'qr-card';
+                
+                card.innerHTML = `
+                    <div class="qr-header">
+                        <span class="qr-number">#${qr.index}</span>
+                        <span class="qr-filename">${qr.filename}</span>
+                    </div>
+                    
+                    <div class="qr-display">
+                        ${qr.svg_content}
+                    </div>
+                    
+                    <div class="qr-info">
+                        <div class="qr-url">
+                            <strong>短網址:</strong> <a href="${qr.short_url}" target="_blank">${qr.short_url}</a>
+                        </div>
+                        <div class="qr-url">
+                            <strong>原始網址:</strong> <a href="${qr.original_url}" target="_blank">${qr.original_url}</a>
+                        </div>
+                    </div>
+                `;
+                
+                gallery.appendChild(card);
+            });
+        }
+        
+        // 打包下載
+        async function downloadAllQRCodes() {
+            if (qrData.length === 0) {
+                alert('沒有 QR Code 可下載');
+                return;
+            }
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = '⏳';
+            
+            try {
+                const zip = new JSZip();
+                
+                // 加入所有 SVG 檔案
+                qrData.forEach(qr => {
+                    zip.file(qr.filename, qr.svg_content);
+                });
+                
+                // 加入說明檔案
+                const readme = `StreetVoice QR Code 批次下載
+
+生成時間: ${new Date().toLocaleString('zh-TW')}
+總數量: ${qrData.length} 個 QR Code
+
+檔案說明:
+${qrData.map(qr => `- ${qr.filename}: ${qr.short_url}`).join('\n')}
+
+工具: StreetVoice sv.link 批次短網址生成器
+`;
+                
+                zip.file('README.txt', readme);
+                
+                // 生成並下載 ZIP
+                const content = await zip.generateAsync({type: 'blob'});
+                
+                const timestamp = new Date().toISOString().slice(0,19).replace(/[:-]/g, '').replace('T', '_');
+                const filename = `sv-link-qrcodes_${timestamp}.zip`;
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = filename;
+                link.click();
+                
+                URL.revokeObjectURL(link.href);
+                
+            } catch (error) {
+                alert(`打包失敗: ${error.message}`);
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = '📦';
+            }
+        }
+        
+        // 事件監聽
+        document.getElementById('downloadBtn').addEventListener('click', downloadAllQRCodes);
+        
+        // 頁面載入時開始生成
+        window.addEventListener('load', generateQRCodes);
+    </script>
+</body>
+</html>
