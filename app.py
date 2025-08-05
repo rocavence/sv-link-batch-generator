@@ -114,7 +114,7 @@ def shorten_urls():
 
 @app.route('/api/export/csv', methods=['POST', 'OPTIONS'])
 def export_csv():
-    """匯出 CSV - 最簡化版本"""
+    """匯出 CSV - 修復編碼版本"""
     if request.method == 'OPTIONS':
         return '', 200
     
@@ -125,42 +125,49 @@ def export_csv():
         if not results:
             return jsonify({'error': '沒有可匯出的數據'}), 400
         
-        # 建立 CSV 內容（純文字）
-        lines = []
-        lines.append("序號,原始網址,短網址,狀態,處理時間")
+        # 使用標準 csv 模組，確保正確編碼
+        output = io.StringIO()
+        writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+        
+        # 寫入標頭
+        writer.writerow(['序號', '原始網址', '短網址', '狀態', '處理時間'])
         
         export_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
+        # 寫入數據
         for index, result in enumerate(results, 1):
-            original = result.get('original', '').replace(',', '，')  # 替換逗號避免CSV問題
-            short = result.get('short', '').replace(',', '，')
-            status = '成功' if result.get('success', False) else '失敗'
-            
-            line = f"{index},{original},{short},{status},{export_time}"
-            lines.append(line)
+            writer.writerow([
+                index,
+                result.get('original', ''),
+                result.get('short', ''),
+                '成功' if result.get('success', False) else '失敗',
+                export_time
+            ])
         
         # 加入摘要
         total_count = len(results)
         success_count = sum(1 for r in results if r.get('success', False))
         
-        lines.append("")
-        lines.append("=== 處理摘要 ===")
-        lines.append(f"總數量,{total_count}")
-        lines.append(f"成功數量,{success_count}")
-        lines.append(f"失敗數量,{total_count - success_count}")
-        lines.append(f"成功率,{(success_count/total_count*100):.1f}%")
-        lines.append(f"匯出時間,{export_time}")
-        lines.append("工具,StreetVoice sv.link 批次短網址生成器")
+        writer.writerow([])
+        writer.writerow(['=== 處理摘要 ==='])
+        writer.writerow(['總數量', total_count])
+        writer.writerow(['成功數量', success_count])
+        writer.writerow(['失敗數量', total_count - success_count])
+        writer.writerow(['成功率', f'{(success_count/total_count*100):.1f}%'])
+        writer.writerow(['匯出時間', export_time])
+        writer.writerow(['工具', 'StreetVoice sv.link 批次短網址生成器'])
         
-        # 組合成完整 CSV 文字
-        csv_text = "\n".join(lines)
+        # 取得 CSV 內容
+        csv_content = output.getvalue()
+        output.close()
         
-        # 加上 BOM 並轉為 bytes
-        csv_with_bom = "\ufeff" + csv_text
-        csv_bytes = csv_with_bom.encode('utf-8')
+        # 重要：先編碼為 UTF-8 bytes，再加 BOM
+        csv_bytes = csv_content.encode('utf-8')
+        bom = '\ufeff'.encode('utf-8')
+        final_csv = bom + csv_bytes
         
         # Base64 編碼
-        csv_base64 = base64.b64encode(csv_bytes).decode()
+        csv_base64 = base64.b64encode(final_csv).decode('ascii')
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'sv-link-results_{timestamp}.csv'
@@ -168,8 +175,8 @@ def export_csv():
         return jsonify({
             'content': csv_base64,
             'filename': filename,
-            'mimetype': 'text/csv',
-            'size': len(csv_bytes),
+            'mimetype': 'text/csv;charset=utf-8',
+            'size': len(final_csv),
             'encoding': 'base64'
         })
         
