@@ -11,7 +11,91 @@
         <div class="header-content">
             <div class="logo">StreetVoice 街聲</div>
             <div class="subtitle">sv.link 批次工具</div>
+            <!-- 批次修改介面 -->
+        <div class="tab-content" id="updateContent">
+            <div class="main-card">
+                <!-- 第一階段：輸入短網址 -->
+                <div class="update-stage-1" id="updateStage1">
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="updateApiKey">sv.link API Key</label>
+                            <input type="password" id="updateApiKey" placeholder="請輸入您的 API Key">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="updateLinkList">要修改的短網址清單（每行一個）</label>
+                            <div class="url-input-wrapper">
+                                <div class="line-numbers" id="updateLineNumbers">1</div>
+                                <textarea id="updateLinkList" placeholder="https://sv.link/xxxxx&#10;https://sv.link/yyyyy&#10;https://sv.link/zzzzz"></textarea>
+                            </div>
+                        </div>
+
+                        <button class="btn" id="updateLookupBtn">
+                            <div class="loading" id="updateLookupLoading"></div>
+                            <span id="updateLookupBtnText">查詢當前目標</span>
+                        </button>
+
+                        <div class="progress" id="updateLookupProgress">
+                            <div class="progress-bar" id="updateLookupProgressBar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第二階段：三欄編輯 -->
+                <div class="update-stage-2" id="updateStage2" style="display: none;">
+                    <div class="form-section">
+                        <h3>編輯目標網址</h3>
+                        <div class="update-edit-container" id="updateEditContainer">
+                            <!-- 動態生成三欄編輯界面 -->
+                        </div>
+                        
+                        <div class="update-buttons">
+                            <button class="btn btn-secondary" onclick="backToUpdateStage1()">← 重新輸入</button>
+                            <button class="btn" id="updateConfirmBtn">確認修改</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第三階段：二次確認 -->
+                <div class="update-stage-3" id="updateStage3" style="display: none;">
+                    <div class="form-section">
+                        <h3>確認修改項目</h3>
+                        <div class="update-confirm-list" id="updateConfirmList">
+                            <!-- 動態生成確認清單 -->
+                        </div>
+                        
+                        <div class="update-buttons">
+                            <button class="btn btn-secondary" onclick="backToUpdateStage2()">← 返回編輯</button>
+                            <button class="btn" id="updateExecuteBtn">
+                                <div class="loading" id="updateExecuteLoading"></div>
+                                <span id="updateExecuteBtnText">執行修改</span>
+                            </button>
+                        </div>
+
+                        <div class="progress" id="updateExecuteProgress">
+                            <div class="progress-bar" id="updateExecuteProgressBar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第四階段：結果顯示 -->
+                <div class="results" id="updateResults">
+                    <div class="form-section">
+                        <h3>修改結果</h3>
+                        <div id="updateResultList"></div>
+                    </div>
+                </div>
+
+                <div class="export-section" id="updateExportSection">
+                    <h3>匯出選項</h3>
+                    <div class="export-buttons">
+                        <button class="btn" id="updateExportCsv">📄 匯出 CSV</button>
+                        <button class="btn btn-secondary" onclick="resetUpdateFlow()">🔄 重新開始</button>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
     </header>
 
     <div class="container">
@@ -22,6 +106,9 @@
             </button>
             <button class="tab-btn" id="lookupTab" onclick="switchTab('lookup')">
                 📊 批次反查
+            </button>
+            <button class="tab-btn" id="updateTab" onclick="switchTab('update')">
+                📝 批次修改
             </button>
         </div>
 
@@ -120,6 +207,8 @@
     <script>
         let currentResults = [];
         let currentLookupResults = [];
+        let currentUpdateData = [];
+        let currentUpdateResults = [];
 
         // DOM 元素 - 生成功能
         const apiKeyInput = document.getElementById('apiKey');
@@ -148,7 +237,19 @@
         const lookupResults = document.getElementById('lookupResults');
         const lookupResultList = document.getElementById('lookupResultList');
         const lookupExportSection = document.getElementById('lookupExportSection');
-        const lookupExportCsvBtn = document.getElementById('lookupExportCsv');
+        // DOM 元素 - 修改功能
+        const updateApiKeyInput = document.getElementById('updateApiKey');
+        const updateLinkListInput = document.getElementById('updateLinkList');
+        const updateLineNumbers = document.getElementById('updateLineNumbers');
+        const updateLookupBtn = document.getElementById('updateLookupBtn');
+        const updateLookupLoading = document.getElementById('updateLookupLoading');
+        const updateLookupBtnText = document.getElementById('updateLookupBtnText');
+        const updateLookupProgress = document.getElementById('updateLookupProgress');
+        const updateLookupProgressBar = document.getElementById('updateLookupProgressBar');
+        const updateResults = document.getElementById('updateResults');
+        const updateResultList = document.getElementById('updateResultList');
+        const updateExportSection = document.getElementById('updateExportSection');
+        const updateExportCsvBtn = document.getElementById('updateExportCsv');
 
         // 選單切換功能
         function switchTab(tab) {
@@ -164,9 +265,11 @@
             if (tab === 'generate') {
                 results.style.display = 'none';
                 exportSection.style.display = 'none';
-            } else {
+            } else if (tab === 'lookup') {
                 lookupResults.style.display = 'none';
                 lookupExportSection.style.display = 'none';
+            } else if (tab === 'update') {
+                resetUpdateFlow();
             }
         }
 
@@ -181,15 +284,374 @@
             lineNumbers.textContent = numbers;
         }
 
-        // 更新行號（反查）
-        function updateLookupLineNumbers() {
-            const lines = linkListInput.value.split('\n');
+        // 更新行號（修改）
+        function updateUpdateLineNumbers() {
+            const lines = updateLinkListInput.value.split('\n');
             const lineCount = Math.max(lines.length, 1);
             let numbers = '';
             for (let i = 1; i <= lineCount; i++) {
                 numbers += i + (i < lineCount ? '\n' : '');
             }
-            lookupLineNumbers.textContent = numbers;
+            updateLineNumbers.textContent = numbers;
+        }
+
+        // 批次修改 - 第一階段：查詢當前目標
+        async function lookupCurrentTargets() {
+            const apiKey = updateApiKeyInput.value.trim();
+            const linkText = updateLinkListInput.value.trim();
+
+            if (!apiKey) {
+                alert('請輸入 API Key');
+                return;
+            }
+
+            if (!linkText) {
+                alert('請輸入要修改的短網址');
+                return;
+            }
+
+            const links = linkText.split('\n').filter(link => link.trim());
+
+            if (links.length === 0) {
+                alert('請輸入有效的短網址');
+                return;
+            }
+
+            setUpdateLookupLoading(true);
+            showUpdateLookupProgress(true);
+
+            try {
+                const response = await fetch('/api/batch-lookup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        links: links
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '查詢失敗');
+                }
+
+                currentUpdateData = data.results;
+                showUpdateEditStage();
+
+            } catch (error) {
+                alert(`錯誤: ${error.message}`);
+                console.error('查詢錯誤:', error);
+            } finally {
+                setUpdateLookupLoading(false);
+                showUpdateLookupProgress(false);
+            }
+        }
+
+        // 顯示編輯階段
+        function showUpdateEditStage() {
+            document.getElementById('updateStage1').style.display = 'none';
+            document.getElementById('updateStage2').style.display = 'block';
+            
+            const container = document.getElementById('updateEditContainer');
+            let html = `
+                <div class="update-edit-header">
+                    <div class="update-col">短網址</div>
+                    <div class="update-col">目前目標</div>
+                    <div class="update-col">新目標</div>
+                </div>
+            `;
+
+            currentUpdateData.forEach((item, index) => {
+                const shortUrl = item.link;
+                const currentTarget = item.success ? item.target : '查詢失敗';
+                const statusClass = item.success ? 'success' : 'failed';
+                
+                html += `
+                    <div class="update-edit-row ${statusClass}">
+                        <div class="update-col short-url">${shortUrl}</div>
+                        <div class="update-col current-target">${currentTarget}</div>
+                        <div class="update-col new-target">
+                            ${item.success ? 
+                                `<input type="text" class="update-input" data-index="${index}" placeholder="輸入新的目標網址">` : 
+                                '<span class="error-text">無法修改</span>'
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 確認修改
+        function confirmUpdate() {
+            const inputs = document.querySelectorAll('.update-input');
+            const changes = [];
+
+            inputs.forEach(input => {
+                const index = parseInt(input.dataset.index);
+                const newTarget = input.value.trim();
+                
+                if (newTarget) {
+                    const item = currentUpdateData[index];
+                    changes.push({
+                        index: index,
+                        shortUrl: item.link,
+                        currentTarget: item.target,
+                        newTarget: newTarget,
+                        linkId: item.linkId
+                    });
+                }
+            });
+
+            if (changes.length === 0) {
+                alert('請至少輸入一個新的目標網址');
+                return;
+            }
+
+            showUpdateConfirmStage(changes);
+        }
+
+        // 顯示確認階段
+        function showUpdateConfirmStage(changes) {
+            document.getElementById('updateStage2').style.display = 'none';
+            document.getElementById('updateStage3').style.display = 'block';
+            
+            const container = document.getElementById('updateConfirmList');
+            let html = `
+                <div class="update-confirm-summary">
+                    即將修改 ${changes.length} 個短網址：
+                </div>
+            `;
+
+            changes.forEach((change, index) => {
+                html += `
+                    <div class="update-confirm-item">
+                        <div class="confirm-row">
+                            <strong>${change.shortUrl}</strong>
+                        </div>
+                        <div class="confirm-row">
+                            <span class="label">目前：</span>${change.currentTarget}
+                        </div>
+                        <div class="confirm-row">
+                            <span class="label">修改為：</span>${change.newTarget}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            window.pendingChanges = changes;
+        }
+
+        // 執行批次修改
+        async function executeBatchUpdate() {
+            const changes = window.pendingChanges;
+            
+            if (!changes || changes.length === 0) {
+                alert('沒有要修改的項目');
+                return;
+            }
+
+            setUpdateExecuteLoading(true);
+            showUpdateExecuteProgress(true);
+
+            try {
+                const response = await fetch('/api/batch-update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_key: updateApiKeyInput.value.trim(),
+                        changes: changes
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '修改失敗');
+                }
+
+                currentUpdateResults = data.results;
+                showUpdateResults(data.results, data.summary);
+
+            } catch (error) {
+                alert(`錯誤: ${error.message}`);
+                console.error('修改錯誤:', error);
+            } finally {
+                setUpdateExecuteLoading(false);
+                showUpdateExecuteProgress(false);
+            }
+        }
+
+        // 顯示修改結果
+        function showUpdateResults(resultsData, summary) {
+            document.getElementById('updateStage3').style.display = 'none';
+            
+            let html = `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">狀態</th>
+                            <th style="width: 60px;">編號</th>
+                            <th>短網址</th>
+                            <th>新目標網址</th>
+                            <th style="width: 90px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            resultsData.forEach((result, index) => {
+                const statusClass = result.success ? 'status-success' : 'status-failed';
+                const statusText = result.success ? '成功' : '失敗';
+                const copyButton = result.success ? 
+                    `<button class="copy-btn" onclick="copyToClipboard('${result.newTarget}', this)">複製</button>` : 
+                    '<span style="color: #ccc;">-</span>';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td>
+                            <span class="row-number">${index + 1}</span>
+                        </td>
+                        <td class="url-cell short-url">${result.shortUrl}</td>
+                        <td class="url-cell original-url">${result.newTarget}</td>
+                        <td>${copyButton}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            
+            const summaryHtml = `
+                <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">總數:</span>
+                        <span style="font-weight: 600; color: #333;">${summary.total}</span>
+                    </div>
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">成功:</span>
+                        <span style="font-weight: 600; color: #28a745;">${summary.success}</span>
+                    </div>
+                    <div>
+                        <span style="color: #6c757d; margin-right: 5px;">失敗:</span>
+                        <span style="font-weight: 600; color: #dc3545;">${summary.failed}</span>
+                    </div>
+                </div>
+            `;
+
+            updateResultList.innerHTML = summaryHtml + html;
+            updateResults.style.display = 'block';
+            updateExportSection.style.display = 'block';
+        }
+
+        // 重置修改流程
+        function resetUpdateFlow() {
+            document.getElementById('updateStage1').style.display = 'block';
+            document.getElementById('updateStage2').style.display = 'none';
+            document.getElementById('updateStage3').style.display = 'none';
+            updateResults.style.display = 'none';
+            updateExportSection.style.display = 'none';
+            currentUpdateData = [];
+            currentUpdateResults = [];
+            window.pendingChanges = null;
+        }
+
+        // 返回階段函數
+        function backToUpdateStage1() {
+            document.getElementById('updateStage2').style.display = 'none';
+            document.getElementById('updateStage1').style.display = 'block';
+        }
+
+        function backToUpdateStage2() {
+            document.getElementById('updateStage3').style.display = 'none';
+            document.getElementById('updateStage2').style.display = 'block';
+        }
+
+        // 載入狀態函數
+        function setUpdateLookupLoading(isLoading) {
+            updateLookupBtn.disabled = isLoading;
+            updateLookupLoading.style.display = isLoading ? 'block' : 'none';
+            updateLookupBtnText.textContent = isLoading ? '查詢中...' : '查詢當前目標';
+        }
+
+        function setUpdateExecuteLoading(isLoading) {
+            const btn = document.getElementById('updateExecuteBtn');
+            const loading = document.getElementById('updateExecuteLoading');
+            const text = document.getElementById('updateExecuteBtnText');
+            
+            btn.disabled = isLoading;
+            loading.style.display = isLoading ? 'block' : 'none';
+            text.textContent = isLoading ? '修改中...' : '執行修改';
+        }
+
+        // 進度條函數
+        function showUpdateLookupProgress(show) {
+            updateLookupProgress.style.display = show ? 'block' : 'none';
+            if (show) {
+                updateLookupProgressBar.style.width = '0%';
+                setTimeout(() => {
+                    updateLookupProgressBar.style.width = '100%';
+                }, 100);
+            }
+        }
+
+        function showUpdateExecuteProgress(show) {
+            const progress = document.getElementById('updateExecuteProgress');
+            const progressBar = document.getElementById('updateExecuteProgressBar');
+            
+            progress.style.display = show ? 'block' : 'none';
+            if (show) {
+                progressBar.style.width = '0%';
+                setTimeout(() => {
+                    progressBar.style.width = '100%';
+                }, 100);
+            }
+        }
+
+        // 匯出修改結果 CSV
+        async function exportUpdateCsv() {
+            if (!currentUpdateResults || currentUpdateResults.length === 0) {
+                alert('請先進行修改');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/export/update-csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        results: currentUpdateResults
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '匯出失敗');
+                }
+
+                const blob = new Blob([atob(data.content)], { type: data.mimetype });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = data.filename;
+                link.click();
+                URL.revokeObjectURL(url);
+
+            } catch (error) {
+                alert(`匯出失敗: ${error.message}`);
+            }
         }
 
         // 處理短網址生成
@@ -568,8 +1030,12 @@
         // 事件監聽器
         processBtn.addEventListener('click', processUrls);
         lookupBtn.addEventListener('click', lookupUrls);
+        updateLookupBtn.addEventListener('click', lookupCurrentTargets);
+        document.getElementById('updateConfirmBtn').addEventListener('click', confirmUpdate);
+        document.getElementById('updateExecuteBtn').addEventListener('click', executeBatchUpdate);
         exportCsvBtn.addEventListener('click', exportCsv);
         lookupExportCsvBtn.addEventListener('click', exportLookupCsv);
+        updateExportCsvBtn.addEventListener('click', exportUpdateCsv);
         exportQrZipBtn.addEventListener('click', openQrGallery);
 
         // 更新行號和同步滾動
@@ -581,6 +1047,11 @@
         linkListInput.addEventListener('input', updateLookupLineNumbers);
         linkListInput.addEventListener('scroll', () => {
             lookupLineNumbers.scrollTop = linkListInput.scrollTop;
+        });
+
+        updateLinkListInput.addEventListener('input', updateUpdateLineNumbers);
+        updateLinkListInput.addEventListener('scroll', () => {
+            updateLineNumbers.scrollTop = updateLinkListInput.scrollTop;
         });
 
         // 支援 Enter 鍵提交
@@ -596,13 +1067,23 @@
             }
         });
 
+        updateApiKeyInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                lookupCurrentTargets();
+            }
+        });
+
         // 初始化行號
         updateLineNumbers();
         updateLookupLineNumbers();
+        updateUpdateLineNumbers();
 
         // 全域函數讓 HTML 可以調用
         window.copyToClipboard = copyToClipboard;
         window.switchTab = switchTab;
+        window.resetUpdateFlow = resetUpdateFlow;
+        window.backToUpdateStage1 = backToUpdateStage1;
+        window.backToUpdateStage2 = backToUpdateStage2;
     </script>
 </body>
 </html>
