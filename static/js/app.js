@@ -11,6 +11,8 @@ class SVLinkBatchGenerator {
         this.initEventListeners();
         this.initUI();
         this.initLineNumbers();
+        this.loadApiKeys();
+        this.loadCurrentAccount();
     }
 
     initEventListeners() {
@@ -34,8 +36,24 @@ class SVLinkBatchGenerator {
         document.getElementById('updateExecuteBtn').addEventListener('click', () => this.executeBatchUpdate());
         document.getElementById('updateExportCsv').addEventListener('click', () => this.exportUpdateCsv());
 
-        // 輸入驗證
-        document.getElementById('apiKey').addEventListener('input', () => this.validateInputs());
+        // API Key 同步和自動保存
+        document.getElementById('apiKey').addEventListener('input', (e) => {
+            this.saveApiKey('apiKey', e.target.value);
+            this.syncApiKeys();
+            this.validateInputs();
+        });
+        
+        document.getElementById('lookupApiKey').addEventListener('input', (e) => {
+            this.saveApiKey('lookupApiKey', e.target.value);
+            this.syncApiKeys();
+        });
+        
+        document.getElementById('updateApiKey').addEventListener('input', (e) => {
+            this.saveApiKey('updateApiKey', e.target.value);
+            this.syncApiKeys();
+        });
+
+        // 其他輸入驗證
         document.getElementById('urlList').addEventListener('input', () => {
             this.validateInputs();
             this.updateLineNumbers();
@@ -83,6 +101,54 @@ class SVLinkBatchGenerator {
         this.updateLineNumbers();
         this.updateLookupLineNumbers();
         this.updateUpdateLineNumbers();
+    }
+
+    // API Key 管理功能
+    saveApiKey(field, value) {
+        if (value.trim()) {
+            sessionStorage.setItem('sv_link_api_key', value.trim());
+        }
+    }
+
+    loadApiKeys() {
+        const savedApiKey = sessionStorage.getItem('sv_link_api_key');
+        if (savedApiKey) {
+            document.getElementById('apiKey').value = savedApiKey;
+            document.getElementById('lookupApiKey').value = savedApiKey;
+            document.getElementById('updateApiKey').value = savedApiKey;
+        }
+    }
+
+    syncApiKeys() {
+        const savedApiKey = sessionStorage.getItem('sv_link_api_key');
+        if (savedApiKey) {
+            document.getElementById('apiKey').value = savedApiKey;
+            document.getElementById('lookupApiKey').value = savedApiKey;
+            document.getElementById('updateApiKey').value = savedApiKey;
+        }
+    }
+
+    // 當前帳號管理
+    saveCurrentAccount(email) {
+        if (email) {
+            sessionStorage.setItem('sv_link_current_account', email);
+            this.displayCurrentAccount(email);
+        }
+    }
+
+    loadCurrentAccount() {
+        const savedEmail = sessionStorage.getItem('sv_link_current_account');
+        if (savedEmail) {
+            this.displayCurrentAccount(savedEmail);
+        }
+    }
+
+    displayCurrentAccount(email) {
+        const accountDiv = document.getElementById('currentAccount');
+        const emailSpan = document.getElementById('currentEmail');
+        
+        emailSpan.textContent = email;
+        accountDiv.style.display = 'inline-block';
     }
 
     // Tab 切換功能
@@ -198,6 +264,11 @@ class SVLinkBatchGenerator {
             if (response.ok && data.results) {
                 this.results = data.results;
                 this.displayResults(data.results, data.summary);
+                
+                // 保存當前帳號信息
+                if (data.account_email) {
+                    this.saveCurrentAccount(data.account_email);
+                }
             } else {
                 throw new Error(data.error || '處理失敗');
             }
@@ -259,6 +330,11 @@ class SVLinkBatchGenerator {
             this.lookupResults = data.results;
             this.displayLookupResults(data.results, data.summary);
 
+            // 保存當前帳號信息
+            if (data.account_email) {
+                this.saveCurrentAccount(data.account_email);
+            }
+
         } catch (error) {
             alert(`錯誤: ${error.message}`);
             console.error('反查錯誤:', error);
@@ -313,6 +389,11 @@ class SVLinkBatchGenerator {
 
             this.updateData = data.results;
             this.showUpdateEditStage();
+
+            // 保存當前帳號信息
+            if (data.account_email) {
+                this.saveCurrentAccount(data.account_email);
+            }
 
         } catch (error) {
             alert(`錯誤: ${error.message}`);
@@ -448,6 +529,11 @@ class SVLinkBatchGenerator {
 
             this.updateResults = data.results;
             this.showUpdateResults(data.results, data.summary);
+
+            // 保存當前帳號信息
+            if (data.account_email) {
+                this.saveCurrentAccount(data.account_email);
+            }
 
         } catch (error) {
             alert(`錯誤: ${error.message}`);

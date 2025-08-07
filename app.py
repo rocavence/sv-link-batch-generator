@@ -16,6 +16,21 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
+def get_account_email(api_key):
+    """根據 API Key 獲取帳號 Email"""
+    try:
+        response = requests.get(
+            'https://sv.link/api/v2/account',
+            headers={'X-API-Key': api_key},
+            timeout=10
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('email', '')
+    except:
+        pass
+    return None
+
 @app.route('/')
 def index():
     """主頁面"""
@@ -42,6 +57,9 @@ def shorten_urls():
         
         if not urls:
             return jsonify({'error': '缺少網址清單'}), 400
+        
+        # 獲取帳號 Email
+        account_email = get_account_email(api_key)
         
         results = []
         
@@ -98,14 +116,19 @@ def shorten_urls():
         
         success_count = sum(1 for r in results if r['success'])
         
-        return jsonify({
+        response_data = {
             'results': results,
             'summary': {
                 'total': len(results),
                 'success': success_count,
                 'failed': len(results) - success_count
             }
-        })
+        }
+        
+        if account_email:
+            response_data['account_email'] = account_email
+        
+        return jsonify(response_data)
         
     except Exception as e:
         return jsonify({'error': f'伺服器錯誤: {str(e)}'}), 500
@@ -126,6 +149,9 @@ def lookup_urls():
         
         if not links:
             return jsonify({'error': '缺少短網址清單'}), 400
+        
+        # 獲取帳號 Email
+        account_email = get_account_email(api_key)
         
         headers = {'X-API-Key': api_key}
         
@@ -213,14 +239,19 @@ def lookup_urls():
         
         success_count = sum(1 for r in results if r['success'])
         
-        return jsonify({
+        response_data = {
             'results': results,
             'summary': {
                 'total': len(results),
                 'success': success_count,
                 'failed': len(results) - success_count
             }
-        })
+        }
+        
+        if account_email:
+            response_data['account_email'] = account_email
+        
+        return jsonify(response_data)
         
     except Exception as e:
         return jsonify({'error': f'反查失敗: {str(e)}'}), 500
@@ -302,6 +333,9 @@ def batch_lookup_for_update():
         
         if not links:
             return jsonify({'error': '缺少短網址清單'}), 400
+        
+        # 獲取帳號 Email
+        account_email = get_account_email(api_key)
         
         headers = {'X-API-Key': api_key}
         
@@ -397,14 +431,19 @@ def batch_lookup_for_update():
         
         success_count = sum(1 for r in results if r['success'])
         
-        return jsonify({
+        response_data = {
             'results': results,
             'summary': {
                 'total': len(results),
                 'success': success_count,
                 'failed': len(results) - success_count
             }
-        })
+        }
+        
+        if account_email:
+            response_data['account_email'] = account_email
+        
+        return jsonify(response_data)
         
     except Exception as e:
         return jsonify({'error': f'查詢失敗: {str(e)}'}), 500
@@ -425,6 +464,9 @@ def batch_update_targets():
         
         if not changes:
             return jsonify({'error': '沒有要修改的項目'}), 400
+        
+        # 獲取帳號 Email
+        account_email = get_account_email(api_key)
         
         headers = {
             'Content-Type': 'application/json',
@@ -507,14 +549,19 @@ def batch_update_targets():
         
         success_count = sum(1 for r in results if r['success'])
         
-        return jsonify({
+        response_data = {
             'results': results,
             'summary': {
                 'total': len(results),
                 'success': success_count,
                 'failed': len(results) - success_count
             }
-        })
+        }
+        
+        if account_email:
+            response_data['account_email'] = account_email
+        
+        return jsonify(response_data)
         
     except Exception as e:
         return jsonify({'error': f'批次更新失敗: {str(e)}'}), 500
@@ -583,6 +630,8 @@ def export_update_csv():
         
     except Exception as e:
         return jsonify({'error': f'Export failed: {str(e)}'}), 500
+
+@app.route('/api/export/lookup-csv', methods=['POST', 'OPTIONS'])
 def export_lookup_csv():
     """匯出反查結果 CSV"""
     if request.method == 'OPTIONS':
