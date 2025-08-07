@@ -681,7 +681,7 @@ class SVLinkBatchGenerator {
             const statusClass = result.success ? 'status-success' : 'status-failed';
             const statusText = result.success ? '成功' : '失敗';
             const copyButton = result.success ? 
-                `<button class="copy-btn" onclick="app.copyToClipboard('${result.newTarget}', this)">複製</button>` : 
+                `<button class="copy-btn" onclick="app.copyToClipboard('${result.shortUrl}', this)">複製</button>` : 
                 '<span style="color: #ccc;">-</span>';
             
             html += `
