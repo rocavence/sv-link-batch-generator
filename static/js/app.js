@@ -151,6 +151,29 @@ class SVLinkBatchGenerator {
         accountDiv.style.display = 'inline-block';
     }
 
+    // 短網址格式標準化功能
+    standardizeShortUrls(urls) {
+        return urls.map(url => {
+            url = url.trim();
+            if (!url) return url;
+            
+            // 移除 http:// 或 https://
+            url = url.replace(/^https?:\/\//, '');
+            
+            // 移除結尾的斜線
+            url = url.replace(/\/$/, '');
+            
+            // 如果包含 sv.link/，提取 ID 部分
+            if (url.includes('sv.link/')) {
+                const id = url.split('sv.link/')[1];
+                return `https://sv.link/${id}`;
+            }
+            
+            // 如果只是 ID，直接組合
+            return `https://sv.link/${url}`;
+        });
+    }
+
     // Tab 切換功能
     switchTab(tab) {
         // 移除所有 active 狀態
@@ -262,6 +285,14 @@ class SVLinkBatchGenerator {
             const data = await response.json();
 
             if (response.ok && data.results) {
+                // 標準化短網址格式
+                data.results.forEach(result => {
+                    if (result.success && result.short) {
+                        const standardized = this.standardizeShortUrls([result.short]);
+                        result.short = standardized[0];
+                    }
+                });
+
                 this.results = data.results;
                 this.displayResults(data.results, data.summary);
                 
@@ -299,12 +330,15 @@ class SVLinkBatchGenerator {
             return;
         }
 
-        const links = linkText.split('\n').filter(link => link.trim());
+        let links = linkText.split('\n').filter(link => link.trim());
 
         if (links.length === 0) {
             alert('請輸入有效的短網址');
             return;
         }
+
+        // 標準化短網址格式
+        links = this.standardizeShortUrls(links);
 
         this.setLookupLoading(true);
         this.showLookupProgress(true);
@@ -326,6 +360,14 @@ class SVLinkBatchGenerator {
             if (!response.ok) {
                 throw new Error(data.error || '反查失敗');
             }
+
+            // 標準化回應中的短網址格式
+            data.results.forEach(result => {
+                if (result.link) {
+                    const standardized = this.standardizeShortUrls([result.link]);
+                    result.link = standardized[0];
+                }
+            });
 
             this.lookupResults = data.results;
             this.displayLookupResults(data.results, data.summary);
@@ -359,12 +401,15 @@ class SVLinkBatchGenerator {
             return;
         }
 
-        const links = linkText.split('\n').filter(link => link.trim());
+        let links = linkText.split('\n').filter(link => link.trim());
 
         if (links.length === 0) {
             alert('請輸入有效的短網址');
             return;
         }
+
+        // 標準化短網址格式
+        links = this.standardizeShortUrls(links);
 
         this.setUpdateLookupLoading(true);
         this.showUpdateLookupProgress(true);
@@ -386,6 +431,14 @@ class SVLinkBatchGenerator {
             if (!response.ok) {
                 throw new Error(data.error || '查詢失敗');
             }
+
+            // 標準化回應中的短網址格式
+            data.results.forEach(result => {
+                if (result.link) {
+                    const standardized = this.standardizeShortUrls([result.link]);
+                    result.link = standardized[0];
+                }
+            });
 
             this.updateData = data.results;
             this.showUpdateEditStage();
@@ -526,6 +579,14 @@ class SVLinkBatchGenerator {
             if (!response.ok) {
                 throw new Error(data.error || '修改失敗');
             }
+
+            // 標準化回應中的短網址格式
+            data.results.forEach(result => {
+                if (result.shortUrl) {
+                    const standardized = this.standardizeShortUrls([result.shortUrl]);
+                    result.shortUrl = standardized[0];
+                }
+            });
 
             this.updateResults = data.results;
             this.showUpdateResults(data.results, data.summary);
