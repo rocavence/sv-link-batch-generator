@@ -408,6 +408,11 @@ body {
     font-weight: 600;
 }
 
+.status-success {
+    background: #d1edff;
+    color: #0c5460;
+}
+
 .status-failed {
     background: #f8d7da;
     color: #721c24;
@@ -463,6 +468,37 @@ body {
 
 .copy-btn.copied {
     background: #28a745;
+}
+
+/* 查看詳情按鈕樣式 */
+.details-btn {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 60px;
+    text-align: center;
+    display: inline-block;
+    font-weight: 500;
+}
+
+.details-btn:hover {
+    background: #138496;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+.details-btn:active {
+    transform: scale(0.95);
+}
+
+.details-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(23, 162, 184, 0.25);
 }
 
 /* 匯出區域 */
@@ -924,6 +960,14 @@ body {
     
     .url-cell {
         max-width: 250px;
+    }
+    
+    /* 手機版按鈕調整 */
+    .copy-btn,
+    .details-btn {
+        font-size: 0.7rem;
+        padding: 5px 6px;
+        min-width: 45px;
     }
     
     /* QR Gallery 手機版 */

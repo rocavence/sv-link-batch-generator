@@ -185,11 +185,12 @@ def lookup_urls():
         # 獲取所有鏈接數據
         all_links = get_all_links()
         
-        # 建立地址到統計的映射
+        # 建立地址到統計的映射，包含 UUID
         link_stats = {}
         for link in all_links:
             address = link.get('address', '')
             link_stats[address] = {
+                'id': link.get('id'),  # 加入 UUID
                 'visit_count': link.get('visit_count', 0),
                 'target': link.get('target', ''),
                 'created_at': link.get('created_at', '')
@@ -214,6 +215,7 @@ def lookup_urls():
                     stats = link_stats[short_id]
                     results.append({
                         'link': link_url,
+                        'id': stats['id'],  # 加入 UUID 欄位
                         'views': stats['visit_count'],
                         'target': stats['target'],
                         'created': stats['created_at'],
@@ -222,6 +224,7 @@ def lookup_urls():
                 else:
                     results.append({
                         'link': link_url,
+                        'id': None,  # 失敗時 ID 為 None
                         'views': 'NOT_FOUND',
                         'target': '',
                         'created': '',
@@ -231,6 +234,7 @@ def lookup_urls():
             except Exception as e:
                 results.append({
                     'link': link_url,
+                    'id': None,  # 錯誤時 ID 為 None
                     'views': f'錯誤: {str(e)[:30]}',
                     'target': '',
                     'created': '',

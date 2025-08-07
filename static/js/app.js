@@ -765,8 +765,8 @@ class SVLinkBatchGenerator {
                         <th style="width: 80px;">狀態</th>
                         <th style="width: 60px;">編號</th>
                         <th>短網址</th>
-                        <th style="width: 100px;">觀看次數</th>
                         <th>目標網址</th>
+                        <th style="width: 100px;">觀看次數</th>
                         <th style="width: 90px;">操作</th>
                     </tr>
                 </thead>
@@ -776,18 +776,26 @@ class SVLinkBatchGenerator {
         resultsData.forEach((result, index) => {
             const statusClass = result.success ? 'status-success' : 'status-failed';
             const statusText = result.success ? '成功' : '失敗';
-            const copyButton = result.success ? 
-                `<button class="copy-btn" onclick="app.copyToClipboard('${result.views}', this)">複製</button>` : 
-                '<span style="color: #ccc;">-</span>';
+            
+            // 判斷是否顯示查看詳情按鈕
+            let actionButton = '<span style="color: #ccc;">-</span>';
+            
+            if (result.success) {
+                const viewCount = parseInt(result.views) || 0;
+                if (viewCount > 0 && result.id) {
+                    // 使用後端提供的正確 UUID 來建構 stats URL
+                    actionButton = `<button class="details-btn" onclick="app.openStatsPage('${result.id}')">查看詳情</button>`;
+                }
+            }
             
             html += `
                 <tr>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td><span class="row-number">${index + 1}</span></td>
                     <td class="url-cell short-url">${result.link}</td>
-                    <td style="text-align: center; font-weight: 600; color: #FF6B6B;">${result.views}</td>
                     <td class="url-cell original-url">${result.target}</td>
-                    <td>${copyButton}</td>
+                    <td style="text-align: center; font-weight: 600; color: #FF6B6B;">${result.views}</td>
+                    <td>${actionButton}</td>
                 </tr>
             `;
         });
@@ -805,6 +813,13 @@ class SVLinkBatchGenerator {
         document.getElementById('lookupResultList').innerHTML = summaryHtml + html;
         document.getElementById('lookupResults').style.display = 'block';
         document.getElementById('lookupExportSection').style.display = 'block';
+    }
+
+    // 開啟統計頁面功能
+    openStatsPage(linkIdOrSlug) {
+        // 建構 stats 頁面 URL
+        const statsUrl = `https://sv.link/stats?id=${linkIdOrSlug}`;
+        window.open(statsUrl, '_blank');
     }
 
     showUpdateResults(resultsData, summary) {
